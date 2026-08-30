@@ -1,65 +1,73 @@
-# Evaluación de la Eficiencia de YOLOv8 en GPU, CPU y Raspberry Pi: Convoluciones Estándar vs. Separables
+[ 🇺🇸 English ] | [ 🇨🇱 [Leer en Español](README.es.md) ]
 
-> **Proyecto de Tesis:** Evaluación del compromiso entre desempeño en detección de objetos y eficiencia computacional del modelo YOLOv8.
+# Evaluating YOLOv8 Efficiency on GPU, CPU, and Raspberry Pi: Standard vs. Separable Convolutions
 
----
+![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
+![TensorFlow](https://img.shields.io/badge/TensorFlow%2FKeras-CUDA%20%7C%20TensorRT-FF6F00?logo=tensorflow&logoColor=white)
+![TFLite](https://img.shields.io/badge/TensorFlow%20Lite-XNNPACK-FF6F00?logo=tensorflow&logoColor=white)
+![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi%204-edge%20deployment-A22846?logo=raspberrypi&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-## 📌 Descripción General
-
-Este repositorio contiene la estructura, metodología y resultados experimentales desarrollados en la tesis *"Evaluación de la eficiencia de YOLOv8 en GPU, CPU y Raspberry Pi: Convoluciones estándar vs separables"*.
-
-El objetivo central de la investigación es analizar y evaluar la arquitectura de detección de objetos **YOLOv8** implementada en entornos con restricciones computacionales. Se realiza una comparación entre la versión base con convoluciones 2D tradicionales (**YOLOv8-Conv2D**) y una variante adaptada mediante el uso de convoluciones separables en profundidad (**YOLOv8-Separable**) en el módulo Head.
-
----
-
-## 🎯 Objetivos del Proyecto
-
-* **Analizar la arquitectura:** Estudiar los componentes base de YOLOv8 (Backbone, Neck y Head) y sus optimizaciones.
-* **Desarrollar variantes:** Implementar la arquitectura clásica de YOLOv8 y la adaptación modificada con capas de convolución separable en profundidad.
-* **Evaluación experimental:** Comparar el desempeño en métricas de precisión, recall, IoU, mAP, velocidad de inferencia y consumo de recursos.
-* **Despliegue en hardware reducido:** Determinar la viabilidad operativa en plataformas embebidas (Raspberry Pi 4) frente a computadores de escritorio (GPU/CPU).
+> **Thesis Project:** Evaluating the trade-off between object-detection performance and computational efficiency in the YOLOv8 model.
 
 ---
 
-## 🛠️ Entornos de Hardware Evaluados
+## 📌 Overview
 
-| Especificación | PC de Escritorio | Raspberry Pi 4 |
+This repository contains the structure, methodology, and experimental results developed for the thesis *"Evaluación de la eficiencia de YOLOv8 en GPU, CPU y Raspberry Pi: Convoluciones estándar vs separables"* (Universidad Mayor, Chile).
+
+The research's central goal is to analyze and evaluate the **YOLOv8** object-detection architecture deployed under computationally constrained environments. It compares the baseline version with traditional 2D convolutions (**YOLOv8-Conv2D**) against a variant adapted with depthwise-separable convolutions (**YOLOv8-Separable**) in the Head module.
+
+---
+
+## 🎯 Project Objectives
+
+* **Analyze the architecture:** Study YOLOv8's core components (Backbone, Neck, and Head) and their optimizations.
+* **Develop variants:** Implement both the classic YOLOv8 architecture and the modified adaptation with depthwise-separable convolution layers.
+* **Experimental evaluation:** Compare precision, recall, IoU, mAP, inference speed, and resource-consumption metrics.
+* **Deployment on constrained hardware:** Determine operational viability on embedded platforms (Raspberry Pi 4) versus desktop computers (GPU/CPU).
+
+---
+
+## 🛠️ Hardware Environments Evaluated
+
+| Specification | Desktop PC | Raspberry Pi 4 |
 | :--- | :--- | :--- |
-| **Procesador** | AMD Ryzen 7 5700X (8C/16T, 3.4 GHz) | Broadcom BCM2711 (ARM Cortex-A72, 1.5 GHz) |
-| **GPU** | NVIDIA RTX 4060 Ti (8 GB GDDR6) | Sin GPU dedicada (Procesamiento por CPU) |
-| **Memoria RAM** | 32 GB DDR4 | 8 GB LPDDR4 |
-| **Framework / Ejecución** | TensorFlow / Keras (CUDA / TensorRT) | TensorFlow Lite / XNNPACK |
+| **Processor** | AMD Ryzen 7 5700X (8C/16T, 3.4 GHz) | Broadcom BCM2711 (ARM Cortex-A72, 1.5 GHz) |
+| **GPU** | NVIDIA RTX 4060 Ti (8 GB GDDR6) | No dedicated GPU (CPU-only processing) |
+| **RAM** | 32 GB DDR4 | 8 GB LPDDR4 |
+| **Framework / Runtime** | TensorFlow / Keras (CUDA / TensorRT) | TensorFlow Lite / XNNPACK |
 
 ---
 
-## 📊 Dataset Utilizado
+## 📊 Dataset Used
 
-* **Base de datos:** COCO2017.
-* **Entrenamiento:** 118,287 imágenes.
-* **Validación:** 5,000 imágenes.
-* **Categorías:** 80 clases de objetos etiquetados.
-* **Resolución de entrada:** **640×640** píxeles.
+* **Database:** COCO2017.
+* **Training:** 118,287 images.
+* **Validation:** 5,000 images.
+* **Categories:** 80 labeled object classes.
+* **Input resolution:** **640×640** pixels.
 
 ---
 
-## 📈 Resultados Resumidos
+## 📈 Summary Results
 
-### 1. Parámetros y Métricas de Calidad de Detección
+### 1. Parameters and Detection-Quality Metrics
 
-| Métrica / Parámetro | YOLOv8-Conv2D | YOLOv8-Separable |
+| Metric / Parameter | YOLOv8-Conv2D | YOLOv8-Separable |
 | :--- | :--- | :--- |
-| **Parámetros Totales** | 3,991,584 (15.23 MB) | **1,258,715 (4.80 MB)** |
-| **Épocas de Entrenamiento** | 50 épocas | 100 épocas |
+| **Total Parameters** | 3,991,584 (15.23 MB) | **1,258,715 (4.80 MB)** |
+| **Training Epochs** | 50 epochs | 100 epochs |
 | **mAP50** | **0.2119** | 0.1751 |
-| **IoU Promedio** | **0.8367** | 0.8302 |
-| **Precisión** | **0.6836** | 0.6734 |
-| **Sensibilidad (Recall)** | **0.3260** | 0.2933 |
+| **Average IoU** | **0.8367** | 0.8302 |
+| **Precision** | **0.6836** | 0.6734 |
+| **Recall** | **0.3260** | 0.2933 |
 
 ---
 
-### 2. Rendimiento y Velocidad de Inferencia
+### 2. Inference Performance and Speed
 
-| Entorno de Prueba | Modelo | FPS | Tiempo Promedio por Imagen ($\overline{t} \pm \sigma$) |
+| Test Environment | Model | FPS | Avg. Time per Image ($\overline{t} \pm \sigma$) |
 | :--- | :--- | :--- | :--- |
 | **PC - GPU (RTX 4060 Ti)** | **YOLOv8-Conv2D**<br>**YOLOv8-Separable** | **5.48 FPS**<br>5.36 FPS | $0.1824 \pm 0.0169\text{ s}$<br>$0.1866 \pm 0.1671\text{ s}$ |
 | **PC - CPU (Ryzen 7)** | **YOLOv8-Conv2D**<br>**YOLOv8-Separable** | 2.34 FPS<br>**2.41 FPS** | $0.4273 \pm 0.0207\text{ s}$<br>$0.4156 \pm 0.0136\text{ s}$ |
@@ -67,17 +75,21 @@ El objetivo central de la investigación es analizar y evaluar la arquitectura d
 
 ---
 
-## 💡 Conclusiones Clave
+## 💡 Key Conclusions
 
-* **Desempeño en Infraestructura con Aceleración:** La versión con convoluciones estándar (**YOLOv8-Conv2D**) logra una calidad de detección superior (mayor mAP y Recall). En equipos de escritorio con GPU o CPU potente, las diferencias en tiempo de inferencia son marginales.
-* **Optimización de Parámetros:** El reemplazo por convoluciones separables en profundidad (**YOLOv8-Separable**) reduce el número total de parámetros en aproximadamente un **68%**.
-* **Impacto en Dispositivos Embebidos:** En entornos sin aceleración dedicada como la Raspberry Pi, **YOLOv8-Separable** incrementa la velocidad de ejecución en casi un orden de magnitud (de 0.07 a 0.68 FPS) y garantiza mayor estabilidad en la latencia cuadro a cuadro.
+* **Performance on accelerated infrastructure:** The standard-convolution version (**YOLOv8-Conv2D**) achieves superior detection quality (higher mAP and Recall). On desktop machines with a GPU or a powerful CPU, inference-time differences are marginal.
+* **Parameter optimization:** Replacing standard convolutions with depthwise-separable ones (**YOLOv8-Separable**) reduces the total parameter count by approximately **68%**.
+* **Impact on embedded devices:** In environments without dedicated acceleration, like the Raspberry Pi, **YOLOv8-Separable** increases execution speed by almost an order of magnitude (from 0.07 to 0.68 FPS) and delivers more stable frame-to-frame latency.
 
 ---
 
-## 📜 Créditos y Referencia Académica
+## 📜 Credits and Academic Reference
 
-* **Autor:** Pablo Vicente Reyes Pino
-* **Tutor:** Dr. Anthony D. Cho
-* **Institución:** Universidad Mayor — Escuela de Ingeniería Civil en Computación e Informática
-* **Ubicación y Fecha:** Santiago, Chile — Abril 2026
+* **Author:** Pablo Vicente Reyes Pino
+* **Advisor:** Dr. Anthony D. Cho
+* **Institution:** Universidad Mayor — Escuela de Ingeniería Civil en Computación e Informática
+* **Location and date:** Santiago, Chile — April 2026
+
+## License
+
+MIT — see [LICENSE](LICENSE).
