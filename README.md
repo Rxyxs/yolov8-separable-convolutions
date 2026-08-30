@@ -83,13 +83,13 @@ The research's central goal is to analyze and evaluate the **YOLOv8** object-det
 
 ---
 
+## License
+
+MIT — see [LICENSE](LICENSE).
+
 ## 📜 Credits and Academic Reference
 
 * **Author:** Pablo Vicente Reyes Pino
 * **Advisor:** Dr. Anthony D. Cho
 * **Institution:** Universidad Mayor — Escuela de Ingeniería Civil en Computación e Informática
 * **Location and date:** Santiago, Chile — April 2026
-
-## License
-
-MIT — see [LICENSE](LICENSE).

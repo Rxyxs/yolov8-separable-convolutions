@@ -83,6 +83,10 @@ El objetivo central de la investigación es analizar y evaluar la arquitectura d
 
 ---
 
+## Licencia
+
+MIT — ver [LICENSE](LICENSE).
+
 ## 📜 Créditos y Referencia Académica
 
 * **Autor:** Pablo Vicente Reyes Pino
