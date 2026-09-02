@@ -76,7 +76,7 @@ This is exactly the trade-off this thesis sets out to measure, not assume: **doe
 
 ## 📈 Summary Results
 
-> All numbers in this section are the **original measurements produced during the thesis work** (training runs and hardware benchmarks executed on the PC and the Raspberry Pi 4 described above). They come directly from the thesis's summary tables and from the saved cell outputs of `20250131 - YOLOv8_Separable.ipynb` (e.g. the `model.summary()` output reporting `Total params: 1,258,715 (4.80 MB)`, and the 10-epoch training log). No number below was recomputed or re-benchmarked on the machine used to write this documentation — see [Reproducibility note](#-reproducibility-note) for why, and what was actually verified here.
+> All numbers in this section are the **original measurements produced during the thesis work** (training runs and hardware benchmarks executed on the PC and the Raspberry Pi 4 described above). They come directly from the thesis's summary tables and from the saved cell outputs of `02_yolov8_separable_conv.ipynb` (e.g. the `model.summary()` output reporting `Total params: 1,258,715 (4.80 MB)`, and the 10-epoch training log). No number below was recomputed or re-benchmarked on the machine used to write this documentation — see [Reproducibility note](#-reproducibility-note) for why, and what was actually verified here.
 
 ### 1. Parameters and Detection-Quality Metrics
 

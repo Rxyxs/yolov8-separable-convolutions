@@ -76,7 +76,7 @@ Este es exactamente el compromiso que esta tesis busca **medir, no asumir**: **�
 
 ## 📈 Resultados Resumidos
 
-> Todos los números de esta sección son las **mediciones originales producidas durante el trabajo de tesis** (entrenamientos y benchmarks de hardware ejecutados en el PC y en la Raspberry Pi 4 descritos arriba). Provienen directamente de las tablas de resultados de la tesis y de las salidas guardadas en las celdas de `20250131 - YOLOv8_Separable.ipynb` (p. ej. la salida de `model.summary()` que reporta `Total params: 1,258,715 (4.80 MB)`, y el registro de entrenamiento de 10 épocas). Ningún número de esta sección fue recalculado ni re-benchmarkeado en la máquina usada para redactar esta documentación — ver la [Nota de reproducibilidad](#-nota-de-reproducibilidad) para el detalle de por qué, y qué se verificó realmente aquí.
+> Todos los números de esta sección son las **mediciones originales producidas durante el trabajo de tesis** (entrenamientos y benchmarks de hardware ejecutados en el PC y en la Raspberry Pi 4 descritos arriba). Provienen directamente de las tablas de resultados de la tesis y de las salidas guardadas en las celdas de `02_yolov8_separable_conv.ipynb` (p. ej. la salida de `model.summary()` que reporta `Total params: 1,258,715 (4.80 MB)`, y el registro de entrenamiento de 10 épocas). Ningún número de esta sección fue recalculado ni re-benchmarkeado en la máquina usada para redactar esta documentación — ver la [Nota de reproducibilidad](#-nota-de-reproducibilidad) para el detalle de por qué, y qué se verificó realmente aquí.
 
 ### 1. Parámetros y Métricas de Calidad de Detección
 
