@@ -1,45 +1,116 @@
-# Evaluación de la Eficiencia de YOLOv8 en GPU, CPU y Raspberry Pi: Convoluciones Estándar vs. Separables
+# EVALUACIÓN DE LA EFICIENCIA DE YOLOV8 EN GPU, CPU Y RASPBERRY PI: CONVOLUCIONES ESTÁNDAR VS SEPARABLES
 
-![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
-![TensorFlow](https://img.shields.io/badge/TensorFlow%2FKeras-CUDA%20%7C%20TensorRT-FF6F00?logo=tensorflow&logoColor=white)
-![TFLite](https://img.shields.io/badge/TensorFlow%20Lite-XNNPACK-FF6F00?logo=tensorflow&logoColor=white)
-![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi%204-Edge%20Deployment-A22846?logo=raspberrypi&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-lightgrey)
-
-> **Proyecto de Tesis:** Evaluación del compromiso (*trade-off*) entre calidad de detección de objetos y eficiencia computacional en arquitecturas YOLOv8 en entornos restringidos.
+> **Autor:** Pablo Vicente Reyes Pino  
+> **Profesor Guía:** Dr. Anthony D. Cho | **Profesor Revisor:** Carlos Muñoz  
+> **Institución:** Universidad Mayor — Escuela de Ingeniería Civil en Computación e Informática  
 
 ---
 
-## Datos Académicos
+## 1. INTRODUCCIÓN
 
-* **Autor:** Pablo Vicente Reyes Pino
-* **Profesor Guía:** Dr. Anthony D. Cho
-* **Profesor Revisor:** Carlos Muñoz
-* **Institución:** Escuela de Ingeniería Civil en Computación e Informática, Facultad de Ciencias, Ingeniería y Tecnología, Universidad Mayor (Santiago, Chile)
-* **Fecha:** Abril / Julio 2026
+### Motivación y Justificación
+- Explicación de la necesidad de visión computacional en tiempo real y la barrera del costo computacional en hardware restringido.
+
+### Descripción del Problema
+- Brecha entre el alto consumo de recursos de Deep Learning y las limitaciones de memoria/procesamiento en sistemas embebidos.
+
+![Figura 1: Ejemplo de detección de objetos (YOLO)](docs/images/figura1_ejemplo_yolo.png)
 
 ---
 
-## Estructura del Proyecto
+## 2. OBJETIVOS E HIPÓTESIS
 
-```text
-yolov8-separable-convolutions/
-├── outputs/
-│   └── figures/
-│       ├── CONV2_50Epoch.png                 # Muestra de inferencia visual YOLOv8-Conv2D (50 épocas)
-│       ├── SEP_100EPOCH.png                  # Muestra de inferencia visual YOLOv8-Separable (100 épocas)
-│       ├── comparacion modelos.png           # Cuadro comparativo del Estado del Arte
-│       ├── comparcion.png                    # Gráfico de barras de reducción de parámetros
-│       ├── fps_by_device.png                 # Rendimiento en cuadros por segundo (FPS) por dispositivo
-│       ├── latency_by_device.png             # Latencia de inferencia (ms/s) por dispositivo
-│       ├── mAP.png                           # Curvas de convergencia mAP50 durante el entrenamiento
-│       ├── map_vs_latency_tradeoff.png       # Análisis del compromiso Precisión vs Latencia
-│       ├── model_size_comparison.png         # Comparativa de tamaño de modelos en disco (MB)
-│       ├── tabla 3.png                       # Resumen paramétrico de las arquitecturas
-│       ├── tabla resultados tesis.png        # Consolidation table con métricas de la tesis
-│       ├── training_convergence_separable.png# Curva detallada de pérdida y convergencia del modelo separable
-│       └── yolo_arq.pdf                      # Esquema arquitectónico detallado de YOLOv8
-├── models/                                   # Pesos y archivos exportados (.pt, .onnx, .tflite)
-├── scripts/                                  # Scripts de entrenamiento, exportación y evaluación de inferencia
-├── README.md                                 # Documentación principal del repositorio
-└── LICENSE                                   # Licencia del proyecto
+### Objetivo General
+- Analizar y evaluar el modelo YOLOv8 para la detección de objetos, implementándolo en un entorno práctico en hardware reducido.
+
+### Objetivos Específicos
+- Analizar la arquitectura y mejoras introducidas en YOLOv8.
+- Desarrollar las versiones clásica (Conv2D) y modificada (SeparableConv2D).
+- Evaluar el rendimiento en precisión, velocidad y eficiencia computacional.
+- Comparar el desempeño en hardware de capacidad reducida.
+
+### Hipótesis de Investigación
+> Los modelos de Deep Learning adaptados para hardware reducido tendrán una precisión mayor que modelos de Deep Learning tradicionales en función de los recursos disponibles, comparando métricas específicas de rendimiento.
+
+---
+
+## 3. MARCO TEÓRICO
+
+### Arquitectura de YOLOv8
+- **Backbone:** CSPDarknet y extracción de características multiescala.
+- **Neck:** FPN y PANet para fusión de características.
+- **Head:** Estrategia desacoplada de clasificación y regresión de cajas.
+- **Funciones de Activación:** Matemáticas de la función SiLU.
+
+![Figura 2: Arquitectura de YOLOv8 (Backbone-Neck-Head)](docs/images/figura2_arquitectura_yolov8.png)
+
+### Conv2D vs Convoluciones Separables (Depthwise + Pointwise)
+- Detalle matemático de operaciones y reducción paramétrica.
+
+![Figura 3: Conv2D vs SeparableConv2D](docs/images/figura3_conv2d_vs_separable.png)
+![Figura 4: Ejemplo de procesos convolución estándar vs convolución separable](docs/images/figura4_procesos_convolucion.png)
+
+---
+
+## 4. METODOLOGÍA
+
+### Diseño Experimental Comparativo
+![Figura 5: Proceso de entrenamiento/validación](docs/images/figura5_proceso_entrenamiento.png)
+
+### Dataset COCO2017
+| Conjunto | Imágenes | Formato de Anotación |
+| :--- | :--- | :--- |
+| **Train** | 118,287 | Coordenadas $(c_x, c_y, w, h)$ |
+| **Val** | 5,000 | Coordenadas $(c_x, c_y, w, h)$ |
+
+### Hardware de Prueba
+| Componente | PC Escritorio | Raspberry Pi 4 |
+| :--- | :--- | :--- |
+| **Procesador** | AMD Ryzen 7 5700X (8C/16T, 3.4GHz) | Broadcom BCM2711 (Quad-core Cortex-A72, 1.5GHz) |
+| **GPU** | NVIDIA RTX 4060 Ti (8GB GDDR6) | Sin GPU dedicada (CPU NEON) |
+| **RAM** | 32 GB DDR4 | 8 GB LPDDR4 |
+
+### Métricas de Evaluación
+- Definiciones y fórmulas matemáticas de **Precision**, **Recall**, **IoU**, **AP**, **mAP50** y **mAP50-95**.
+
+---
+
+## 5. DESARROLLO Y RESULTADOS
+
+### Comparación de Parámetros del Modelo
+| Modelo | Parámetros Totales | Parámetros Entrenables | Parámetros No Entrenables |
+| :--- | :--- | :--- | :--- |
+| **YOLOv8 Modificado (Separable)** | 1,258,715 (4.80 MB) | 1,245,819 (4.75 MB) | 12,896 (50.38 KB) |
+| **YOLOv8 Base (Conv2D)** | 3,991,584 (15.23 MB) | 3,978,688 (15.18 MB) | 12,896 (50.38 KB) |
+
+### Evolución del Rendimiento (mAP por época)
+![Figura 6: Evolución del mAP por cada 10 épocas](docs/images/figura6_map_epocas.png)
+
+### Resultados de Validación Cualitativos
+![Figura 7: Detecciones cualitativas YOLOv8-Conv2D (50 épocas)](docs/images/figura7_deteccion_conv2d.png)
+![Figura 8: Detecciones cualitativas YOLOv8-Separable (100 épocas)](docs/images/figura8_deteccion_separable.png)
+
+### Tabla General de Resultados de Validación e Inferencia
+| Métrica / Dispositivo | YOLOv8-Separable (100 Epoch) | YOLOv8-Conv2D (50 Epoch) |
+| :--- | :--- | :--- |
+| **mAP50** | 0.1751 | 0.2119 |
+| **IoU Promedio** | 0.8302 | 0.8367 |
+| **Precisión** | 0.6734 | 0.6836 |
+| **Recall** | 0.2933 | 0.3260 |
+| **FPS en CPU** | 2.41 | 2.34 |
+| **FPS en GPU** | 5.36 | 5.48 |
+| **FPS en Raspberry Pi** | **0.68** | **0.07** |
+| **Tiempo Promedio Raspberry Pi (s)** | **1.4754 ± 0.0142** | **13.9322 ± 1.5230** |
+
+---
+
+## 6. CONCLUSIONES Y FUTURAS LÍNEAS DE INVESTIGACIÓN
+
+### Conclusiones
+- Análisis detallado del *trade-off* entre precisión y eficiencia computacional.
+- Evaluación del impacto de la reducción del 68% de parámetros en hardware restringido vs. plataformas aceleradas.
+
+### Futuras Líneas de Investigación
+- Despliegue en hardware especializado (Google Edge TPU, NVIDIA Jetson, FPGAs/NPUs).
+- Comparativa frente a detectores ultraligeros (NanoDet, MobileNet-SSD).
+- Aplicación de técnicas de cuantización (INT8) y poda de parámetros (*pruning*).
