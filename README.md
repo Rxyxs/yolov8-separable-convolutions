@@ -10,7 +10,7 @@
 
 ---
 
-## 📌 Datos Académicos
+## Datos Académicos
 
 * **Autor:** Pablo Vicente Reyes Pino
 * **Profesor Guía:** Dr. Anthony D. Cho
@@ -20,68 +20,73 @@
 
 ---
 
-## 📌 Resumen y Motivación
+## Resumen y Motivación
 
-La detección de objetos en tiempo real es fundamental en sistemas de visión artificial modernos, como conducción autónoma, videovigilancia y robótica industrial. No obstante, los modelos de aprendizaje profundo tradicionales requieren una elevada capacidad de procesamiento que dificulta su despliegue en dispositivos de borde o hardware reducido.
+La detección de objetos en tiempo real es fundamental en sistemas de visión artificial modernos, como conducción autónoma, videovigilancia y robótica industrial. No obstante, los modelos de aprendizaje profundo tradicionales requieren una elevada capacidad de procesamiento que dificulta su despliegue en dispositivos de borde (*edge computing*) o hardware de capacidades reducidas.
 
-Esta investigación evalúa el comportamiento del modelo **YOLOv8** modificando su módulo de detección (*Head*) mediante la sustitución de convoluciones 2D estándar (**YOLOv8-Conv2D**) por convoluciones separables en profundidad (**YOLOv8-Separable**). Ambos modelos fueron probados bajo un estricto protocolo experimental idéntico a lo largo de tres perfiles de hardware distintos: GPU dedicada, CPU de escritorio y una plataforma embebida Raspberry Pi 4.
+Esta investigación evalúa el comportamiento del modelo **YOLOv8** modificando su módulo de detección (*Head*) mediante la sustitución de convoluciones 2D estándar (**YOLOv8-Conv2D**) por convoluciones separables en profundidad (**YOLOv8-Separable**). La modificación se concentra en la etapa final de predicción para reducir el costo computacional sin alterar severamente la extracción multiescala de características realizada por el *Backbone* y *Neck*. Ambos modelos fueron probados bajo un estricto protocolo experimental idéntico a lo largo de tres perfiles de hardware distintos: GPU dedicada, CPU de escritorio y una plataforma embebida Raspberry Pi 4.
 
 ---
 
-## 🔬 Hipótesis de Investigación
+## Hipótesis de Investigación
 
 > *"Los modelos de Deep Learning adaptados para hardware reducido tendrán una precisión mayor que los modelos de Deep Learning tradicionales en función de los recursos disponibles, comparando métricas específicas de rendimiento."*
 
 ---
 
-## 🧭 Marco Teórico y Modificación Arquitectónica
+## Marco Teórico y Modificación Arquitectónica
 
-El modelo YOLOv8 organiza su flujo en tres módulos principales: **Backbone** (extracción de características con CSPDarknet y activación SiLU), **Neck** (fusión multiescala vía FPN y PANet con bloques C2f y SPPF) y **Head** (generación de predicciones de cajas y clases).
+El modelo YOLOv8 organiza su flujo en tres módulos principales: **Backbone** (extracción de características con CSPDarknet y activación SiLU), **Neck** (fusión multiescala vía FPN y PANet con bloques C2f y SPPF) y **Head** (generación de predicciones de cajas delimitadoras y clasificación).
 
 ### Convolución Conv2D (Estándar)
-Aplica un filtro tridimensional completo sobre los canales de entrada. El número de parámetros requeridos para un kernel de tamaño $k$ con $C_{\text{in}}$ canales de entrada y $C_{\text{out}}$ filtros de salida es:
+Aplica un filtro tridimensional completo sobre todos los canales de entrada simultáneamente. El número de parámetros requeridos para un kernel de tamaño $k$ con $C_{\text{in}}$ canales de entrada y $C_{\text{out}}$ filtros de salida es:
 
-$$P_{\text{conv\_std}} = k \times k \times C_{\text{in}} \times C_{\text{out}}$$
+$$P_{\text{conv-std}} = k \times k \times C_{\text{in}} \times C_{\text{out}}$$
 
 ### Convolución Separable en Profundidad
-Factoriza la operación convolucional en dos etapas independientes:
-1. **Convolución Depthwise:** Aplica un filtro espacial $k \times k$ a cada canal de entrada de forma individual.
+Factoriza la operación convolucional estándar en dos etapas independientes:
+1. **Convolución Depthwise:** Aplica un filtro espacial $k \times k$ a cada canal de entrada de forma individual sin mezclar información entre canales.
    $$P_{\text{depthwise}} = k \times k \times C_{\text{in}}$$
-2. **Convolución Pointwise:** Realiza una proyección lineal $1 \times 1$ para mezclar la información entre canales.
+2. **Convolución Pointwise:** Realiza una proyección lineal $1 \times 1$ a través de todos los canales para mezclar la información espacial obtenida.
    $$P_{\text{pointwise}} = C_{\text{in}} \times C_{\text{out}}$$
 
-Esta sustitución estratégica en el módulo *Head* reduce la complejidad computacional y el número de parámetros del modelo en aproximadamente un **68%**.
+Esta sustitución estratégica en las capas del módulo *Head* reduce la complejidad computacional total y el número de parámetros del modelo en aproximadamente un **68%**, aliviando la carga sobre la memoria caché y las unidades aritméticas del procesador.
 
 ---
 
-## 🛠️ Entornos de Hardware y Justificación de Plataformas
+## Entornos de Hardware y Justificación de Plataformas
 
 | Especificación | PC de Escritorio (GPU) | PC de Escritorio (CPU) | Raspberry Pi 4 | ESP32-CAM |
 | :--- | :--- | :--- | :--- | :--- |
 | **Procesador** | AMD Ryzen 7 5700X (8C/16T, 3.4 GHz) | AMD Ryzen 7 5700X | Broadcom BCM2711 (Quad-core ARM Cortex-A72 @ 1.5 GHz) | ESP32-D0WDQ6 Dual-core @ 240 MHz |
 | **Acelerador Gráfico** | NVIDIA RTX 4060 Ti (8 GB GDDR6) | Sin GPU dedicada | Sin GPU dedicada (ARM NEON SIMD) | Sin acelerador |
 | **Memoria RAM** | 32 GB DDR4 3200 MHz | 32 GB DDR4 | 8 GB LPDDR4 2133 MHz | 520 KB SRAM + 4 MB PSRAM |
-| **Consumo Energético** | ~160W (GPU) + 65W (CPU) | ~65W | **~7W** | Ultra bajo |
+| **Consumo Energético** | ~160W (GPU) + 65W (CPU) | ~65W | **~7W** | Ultra bajo (<2W) |
 | **Runtime / Framework** | TensorFlow / Keras (CUDA / TensorRT) | TensorFlow CPU | TensorFlow Lite / XNNPACK | Incompatible |
-| **Estado de Despliegue** | Evaluado | Evaluado | **Evaluado** | **Descartado** (memoria insuficiente para cargar el grafo de YOLOv8) |
+| **Estado de Despliegue** | Evaluado | Evaluado | **Evaluado** | **Descartado** (memoria insuficiente) |
+
+### Análisis de Viabilidad de Dispositivos Embebidos
+
+* **Raspberry Pi 4:** Representa el entorno borde objetivo. Su procesador ARM de 64 bits con soporte de instrucciones vectoriales NEON permite ejecutar el motor TensorFlow Lite mediante delegados XNNPACK, convirtiéndolo en la plataforma ideal para evaluar la ganancia de velocidad de arquitecturas optimizadas.
+* **Descarte de ESP32-CAM:** Fue evaluado como alternativa microcontroladora de consumo ultra bajo. Sin embargo, con solo 520 KB de SRAM interna y 4 MB de PSRAM externa, el hardware resultó incapaz de asignar la memoria del grafo de ejecución de YOLOv8 durante la fase de inicialización (*tensor arena allocation*), provocando errores fatales por desbordamiento de memoria (Out-Of-Memory).
 
 ---
 
-## 📊 Configuración del Dataset y Entrenamiento
+## Configuración del Dataset y Metodología de Entrenamiento
 
-* **Base de datos:** COCO2017 (80 categorías de objetos etiquetados).
-* **División de datos:** 118,287 imágenes para entrenamiento y 5,000 para validación.
-* **Resolución de entrada:** 640×640 píxeles.
-* **Costo computacional de entrenamiento:** Entre 10 y 12 horas por época en GPU dedicada.
-* **Criterio de convergencia:**
-  * **YOLOv8-Conv2D:** Entrenado durante **50 épocas** (alcanzó estabilidad antes de iniciar sobreajuste).
-  * **YOLOv8-Separable:** Entrenado durante **100 épocas** (requirió mayor número de iteraciones dada su menor capacidad representacional por capa).
+* **Dataset:** COCO2017 (80 categorías de objetos etiquetados en escenarios reales).
+* **Partición de datos:** 118,287 imágenes para entrenamiento y 5,000 para validación.
+* **Resolución de entrada:** 640×640 píxeles con escalado y normalización estándar.
+* **Costo computacional de entrenamiento:** Entre 10 y 12 horas por época en GPU dedicada NVIDIA RTX 4060 Ti.
+* **Divergencia en Criterios de Convergencia:**
+  * **YOLOv8-Conv2D:** Entrenado durante **50 épocas**. Dada su mayor densidad de parámetros y capacidad representacional por capa, la red estabilizó su función de pérdida rápidamente y alcanzó el punto óptimo antes de mostrar indicios de sobreajuste.
+  * **YOLOv8-Separable:** Entrenado durante **100 épocas**. Al desacoplar el aprendizaje espacial del canal, las capas separables poseen menor expresividad individual, requiriendo un proceso de optimización por descenso de gradiente más prolongado para ajustar las relaciones complejas entre características multiescala.
 
 ---
 
-## 📈 Resultados Experimentales
+## Resultados Experimentales
 
-### 1. Desglose de Parámetros de los Modelos
+### 1. Desglose y Comparación de Parámetros de los Modelos
 
 ![Tabla 3 - Comparación de Parámetros](outputs/figures/tabla%203.png)
 
@@ -95,7 +100,7 @@ Esta sustitución estratégica en el módulo *Head* reduce la complejidad comput
 
 ---
 
-### 2. Métricas de Calidad de Detección y Eficiencia Computacional
+### 2. Métricas de Calidad de Detección y Eficiencia Computacional en Hardware
 
 ![Tabla de Resultados de Validación Tesis](outputs/figures/tabla%20resultados%20tesis.png)
 
@@ -115,7 +120,7 @@ Esta sustitución estratégica en el módulo *Head* reduce la complejidad comput
 
 ---
 
-## 📊 Visualizaciones de Resultados
+## Visualizaciones de Resultados
 
 ### Evolución de la Métrica mAP por Épocas
 
@@ -127,24 +132,23 @@ Esta sustitución estratégica en el módulo *Head* reduce la complejidad comput
 
 ---
 
-## 💡 Conclusiones Principales
+## Conclusiones Principales
 
-* **Entornos con aceleración dedicada (GPU / CPU potente):** El modelo estándar **YOLOv8-Conv2D** ofrece el mejor desempeño en mAP50, IoU y Recall. En estos entornos, las diferencias en velocidad de inferencia son marginales (5.48 vs 5.36 FPS) debido a que los Tensor Cores absorben el costo aritmético de la convolución 2D.
-* **Entornos embebidos de capacidad reducida (Raspberry Pi 4):** El beneficio del modelo **YOLOv8-Separable** es drástico, multiplicando la velocidad de inferencia por casi un orden de magnitud (de 0.07 FPS a 0.68 FPS) y reduciendo la latencia de 13.93 s a 1.47 s por cuadro, con una variabilidad de tiempo ($\sigma$) sumamente estable.
-* **Compromiso precisión vs. velocidad:** Existe un *trade-off* directo en el que YOLOv8-Separable sacrifica un ~3.68% de mAP50 a cambio de permitir la operatividad práctica en hardware embebido sin aceleración.
-
----
-
-## 🚀 Futuras Líneas de Investigación
-
-* **Hardware especializado:** Probar el despliegue en aceleradores de bajo consumo como Google Coral Edge TPU, NVIDIA Jetson Nano/Orin y NPU/FPGAs.
-* **Recuperación de precisión:** Aplicar técnicas de ajuste fino (*fine-tuning*) progresivo y cuantización (*INT8 / FP16*) para recuperar la pérdida de mAP en modelos separables.
-* **Comparativa ampliada:** Evaluar contra otras arquitecturas livianas nativas como NanoDet, MobileNet-SSD y PP-YOLO.
-* **Pruebas en tiempo real:** Medir consumo energético (Watts), temperatura de trabajo y estabilidad de flujo continuo en escenarios operativos reales.
+* **Entornos con aceleración dedicada (GPU / CPU potente):** El modelo **YOLOv8-Conv2D** ofrece el mejor desempeño general en mAP50, IoU y Recall. En este hardware, la arquitectura masiva de los Tensor Cores absorbe sin problemas la carga de las convoluciones 2D estándar, por lo que la reducción de parámetros del modelo Separable no ofrece ventajas en latencia (5.48 vs 5.36 FPS).
+* **Entornos embebidos restringidos (Raspberry Pi 4):** El beneficio de **YOLOv8-Separable** es determinante. Permite transformar un modelo inoperable (13.93 s por cuadro) en un sistema funcional (1.47 s por cuadro), multiplicando la tasa de procesamiento por casi 10 veces y reduciendo significativamente la dispersión temporal ($\sigma = \pm 0.0142\text{ s}$).
+* **Compromiso precisión vs. velocidad:** Se valida el *trade-off* fundamental de la hipótesis: asumir una leve reducción en mAP50 (~3.68%) resulta ser una estrategia eficiente y necesaria para habilitar la ejecución de modelos avanzados de visión artificial en dispositivos de bajo consumo energético y recursos reducidos.
 
 ---
 
-## 📜 Referencia Académica y Créditos
+## Futuras Líneas de Investigación
+
+* **Despliegue en Aceleradores Dedicated Edge:** Evaluar el rendimiento en plataformas con NPUs y aceleradores TPU de bajo consumo, como Google Coral Edge TPU, NVIDIA Jetson Nano/Orin y FPGAs.
+* **Técnicas Complementarias de Compresión:** Aplicar cuantización post-entrenamiento (*INT8 / FP16*) y técnicas de destilación de conocimiento (*Knowledge Distillation*) sobre el modelo separable para recuperar la precisión perdida sin aumentar la latencia.
+* **Evaluación de Consumo Físico:** Realizar mediciones directas de corriente (Amperios), potencia consumida (Watts) y estrangulamiento térmico (*thermal throttling*) durante operaciones sostenidas de inferencia continua.
+
+---
+
+## Referencia Académica y Créditos
 
 Si utilizas este trabajo o código en tu investigación, favor citar:
 
