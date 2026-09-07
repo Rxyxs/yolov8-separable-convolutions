@@ -85,6 +85,8 @@ Esta sustitución estratégica en el módulo *Head* reduce la complejidad comput
 
 ![Tabla 3 - Comparación de Parámetros](outputs/figures/tabla%203.png)
 
+> Al comparar los parámetros del modelo (Conv2D vs Separable) se aprecia el costo-beneficio entre eficiencia y exactitud. Al implementar convoluciones separables en el modelo, se logró reducir los parámetros en un 68%, bajando de 3.99 a 1.25 millones. Si bien esto significó una pequeña caída en la precisión de 0.21 a 0.17, la ventaja al operar en equipos limitados fue gigante. Se logró destrabar el cuello de botella en nuestra placa, acelerando el procesamiento diez veces para pasar de 14 a solo 1.48 segundos por imagen. Sumado a esto, se consiguió estabilizar bastante los tiempos de respuesta. En el fondo, se demostró que este pequeño costo en precisión es la clave que realmente permite ejecutar modelos de visión artificial en dispositivos de bajos recursos.
+
 | Métrica de Arquitectura | YOLOv8-Conv2D | YOLOv8-Separable | Reducción |
 | :--- | :--- | :--- | :--- |
 | **Parámetros Totales** | 3,991,584 (15.23 MB) | **1,258,715 (4.80 MB)** | **-68.46%** |
@@ -96,6 +98,14 @@ Esta sustitución estratégica en el módulo *Head* reduce la complejidad comput
 ### 2. Métricas de Calidad de Detección y Eficiencia Computacional
 
 ![Tabla de Resultados de Validación Tesis](outputs/figures/tabla%20resultados%20tesis.png)
+
+> Para analizar estos resultados, debemos separar el comportamiento del modelo según el hardware.
+>
+> En términos de precisión y entrenamiento, el modelo Conv2D clásico lidera con un mAP50 de 0.2119, superando el 0.1751 de nuestra variante Separable, y convergiendo en la mitad del tiempo (50 épocas frente a 100). De hecho, si se evalúa la inferencia en una infraestructura potente, como una CPU o GPU de escritorio, los tiempos son casi iguales, por lo que en ese escenario el modelo clásico es la opción indiscutida.
+>
+> Sin embargo, el objetivo central del proyecto es operar en dispositivos de bajos recursos, y ahí es donde se justifica nuestra propuesta. Al implementar convoluciones separables, logramos reducir el peso de la arquitectura en un 68%, pasando de 3.99 a solo 1.25 millones de parámetros.
+>
+> El impacto crítico de esta optimización se evidencia en el despliegue sobre la Raspberry Pi. Mientras el modelo estándar resulta totalmente inviable, operando a 0.07 FPS (casi 14 segundos por imagen), el modelo Separable viabiliza por completo el despliegue. Se logró desplomar ese tiempo a 1.48 segundos por imagen (0.68 FPS), lo que se traduce en una aceleración de casi 10 veces respecto al original. Aún más importante, logramos una desviación estándar de apenas ±0.0142 segundos, lo que demuestra empíricamente que pasamos de un entorno inoperable a una ejecución completamente estable y predecible.
 
 | Plataforma de Prueba | Modelo | FPS | Tiempo Promedio por Imagen ($\overline{t} \pm \sigma$) |
 | :--- | :--- | :---: | :---: |
@@ -110,6 +120,8 @@ Esta sustitución estratégica en el módulo *Head* reduce la complejidad comput
 ### Evolución de la Métrica mAP por Épocas
 
 ![Evolución mAP](outputs/figures/mAP.png)
+
+> Al analizar la evolución de la métrica mAP, notamos dos comportamientos muy marcados. El modelo Conv2D, dada su mayor complejidad, convergió de manera bastante rápida y logró extraer características de forma estable. Por otro lado, el modelo Separable, al tener menor capacidad de representación, presentó mayores fluctuaciones; le costó bastante más estabilizar la función de pérdida y obligó a completar las 100 épocas de entrenamiento para que los pesos lograran converger.
 
 * **Gráfico interactivo:** [Análisis Trade-off mAP vs Latencia](https://htmlpreview.github.io/?https://github.com/Rxyxs/yolov8-separable-convolutions/blob/main/outputs/interactive/latency_map_tradeoff.html)
 
