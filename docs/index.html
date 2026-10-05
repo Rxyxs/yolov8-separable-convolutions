@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EVALUATING YOLOV8 EFFICIENCY ON GPU, CPU AND RASPBERRY PI: STANDARD VS. SEPARABLE CONVOLUTIONS</title>
+<meta name="description" content="&gt; **Author:** Pablo Vicente Reyes Pino">
+<style>
+  :root { --bg:#FBFAF8; --surface:#FFF; --ink:#23201D; --muted:#6B645D; --line:#E3DED7; --accent:#B5553D; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg:#171614; --surface:#201E1B; --ink:#EDE9E3; --muted:#A9A29A; --line:#322E2A; --accent:#D9765C; } }
+  :root[data-theme="dark"] { --bg:#171614; --surface:#201E1B; --ink:#EDE9E3; --muted:#A9A29A; --line:#322E2A; --accent:#D9765C; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:900px; margin:0 auto; padding:0 16px 88px; }
+  header { padding:60px 0 32px; border-bottom:1px solid var(--line); margin-bottom:36px; }
+  h1 { font-size:clamp(1.7rem,5vw,2.4rem); line-height:1.16; margin:0 0 18px; letter-spacing:-.02em; }
+  .lede { font-size:clamp(1rem,2.3vw,1.1rem); color:var(--muted); margin:0 0 22px; max-width:62ch; }
+  .lede strong { color:var(--ink); }
+  .links a { display:inline-block; margin:0 9px 9px 0; padding:9px 15px; border:1px solid var(--line);
+    border-radius:7px; text-decoration:none; color:var(--ink); background:var(--surface); font-size:.9rem;
+    transition:border-color .15s; }
+  .links a:hover { border-color:var(--accent); }
+  h2 { font-size:1.3rem; margin:48px 0 8px; padding-top:12px; border-top:1px solid var(--line); letter-spacing:-.01em; }
+  figure { margin:22px 0; }
+  figure img { width:100%; height:auto; display:block; border:1px solid var(--line); border-radius:9px; background:#fff; }
+  figcaption { font-size:.85rem; color:var(--muted); margin-top:9px; max-width:70ch; }
+  p { margin:0 0 16px; max-width:70ch; }
+  code { background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:1px 5px; font-size:.86em;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+  footer { margin-top:60px; padding-top:22px; border-top:1px solid var(--line); font-size:.86rem; color:var(--muted); }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>EVALUATING YOLOV8 EFFICIENCY ON GPU, CPU AND RASPBERRY PI: STANDARD VS. SEPARABLE CONVOLUTIONS</h1>
+<p class="lede">&gt; <strong>Author:</strong> Pablo Vicente Reyes Pino</p>
+<div class="links">
+<a href="https://github.com/Rxyxs/yolov8-separable-convolutions">Code and method</a>
+<a href="https://github.com/Rxyxs/yolov8-separable-convolutions#readme">Full README</a>
+</div></header>
+<p>This page shows the project's results. The methodology, the design decisions and the limitations are documented in the repository's README.</p>
+<h2>1.2 Problem statement</h2>
+<figure>
+<img src="figures/figura1_ejemplo_yolo.png" alt="Figure 1: Object detection example (YOLO)" loading="lazy">
+<figcaption>&lt;p align=&quot;center&quot;&gt;&lt;em&gt;Figure 1: Object detection example (YOLO). Places object detection within the family of computer-vision tasks: semantic segmentation, classification + localization, object detection and instance segmentation.&lt;/em&gt;&lt;/p&gt;</figcaption>
+</figure>
+<h2>3.2 YOLOv8 architecture</h2>
+<figure>
+<img src="figures/figura2_arquitectura_yolov8.png" alt="Figure 2: YOLOv8 architecture (Backbone-Neck-Head)" loading="lazy">
+<figcaption>&lt;p align=&quot;center&quot;&gt;&lt;em&gt;Figure 2: Standard YOLOv8 model as implemented (Terven et al., 2023). 640×640×3 input, four Backbone stages, multi-scale fusion in the Neck and three decoupled prediction branches in the Head.&lt;/em&gt;&lt;/p&gt;</figcaption>
+</figure>
+<h2>3.3 Conv2D vs. separable convolutions</h2>
+<figure>
+<img src="figures/figura3_conv2d_vs_separable.png" alt="Figure 3: Conv2D vs SeparableConv2D" loading="lazy">
+<figcaption>&lt;p align=&quot;center&quot;&gt;&lt;em&gt;Figure 3: Conv2D vs SeparableConv2D (comparative diagram).&lt;/em&gt;&lt;/p&gt;</figcaption>
+</figure>
+<figure>
+<img src="figures/figura4_procesos_convolucion.png" alt="Figure 4: Standard vs separable convolution processes" loading="lazy">
+<figcaption>&lt;p align=&quot;center&quot;&gt;&lt;em&gt;Figure 4: Example of standard vs. separable convolution processes. Above, the single 3D filter sweeping space and channels simultaneously; below, the decomposition into per-channel filtering (depthwise) followed by cross-channel combination (pointwise).&lt;/em&gt;&lt;/p&gt;</figcaption>
+</figure>
+<h2>4.1 Research design</h2>
+<figure>
+<img src="figures/figura5_proceso_entrenamiento.png" alt="Figure 5: Training/validation process" loading="lazy">
+<figcaption>&lt;p align=&quot;center&quot;&gt;&lt;em&gt;Figure 5: Training / validation process.&lt;/em&gt;&lt;/p&gt;</figcaption>
+</figure>
+<h2>5.3 Performance evolution: mAP every 10 epochs</h2>
+<figure>
+<img src="figures/figura6_map_epocas.png" alt="Figure 6: mAP evolution every 10 epochs" loading="lazy">
+<figcaption>&lt;p align=&quot;center&quot;&gt;&lt;em&gt;Figure 6: Evolution of the mAP metric every 10 epochs. (a) YOLOv8-Conv2D model. (b) YOLOv8-Separable model.&lt;/em&gt;&lt;/p&gt;</figcaption>
+</figure>
+<h2>5.4 Validation results per model</h2>
+<figure>
+<img src="figures/figura7_deteccion_conv2d.png" alt="Figure 7: YOLOv8-Conv2D detection model trained for 50 epochs" loading="lazy">
+<figcaption>&lt;p align=&quot;center&quot;&gt;&lt;em&gt;Figure 7: Detection with YOLOv8-Conv2D trained for 50 epochs. Ground-truth boxes in red, model predictions in yellow, over COCO2017 validation images.&lt;/em&gt;&lt;/p&gt;</figcaption>
+</figure>
+<figure>
+<img src="figures/figura8_deteccion_separable.png" alt="Figure 8: YOLOv8-Separable detection model trained for 100 epochs" loading="lazy">
+<figcaption>&lt;p align=&quot;center&quot;&gt;&lt;em&gt;Figure 8: Detection with YOLOv8-Separable trained for 100 epochs. Same visualization protocol and same validation images as Figure 7, for direct comparison.&lt;/em&gt;&lt;/p&gt;</figcaption>
+</figure>
+<h2>5.7 Visualizations derived from the results</h2>
+<figure>
+<img src="figures/training_convergence_separable.png" alt="Training convergence — YOLOv8-Separable" loading="lazy">
+<figcaption>This curve is not a summary statistic: it is the epoch-by-epoch <code>box_loss</code> / <code>class_loss</code> / <code>val_loss</code> sequence saved in the output cell of <code>02_yolov8_separable_conv.ipynb</code> itself (<code>Epoch 1/10 … Epoch 10/10</code>), included so the reported metrics can be audited against the raw training log and not only against the final numbers.</figcaption>
+</figure>
+<footer>
+Pablo Reyes · <a href="https://github.com/Rxyxs/yolov8-separable-convolutions">github.com/Rxyxs/yolov8-separable-convolutions</a> · MIT<br><br>
+Every figure on this page is produced by the repository's pipeline. For the full method and its limitations, see the README.
+</footer>
+</div></body></html>
