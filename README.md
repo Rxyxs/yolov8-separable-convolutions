@@ -1,4 +1,4 @@
-[ 🇺🇸 English ] | [ 🇨🇱 [Leer en Español](README.es.md) ]
+[English ] | [ [Español](README.es.md) ]
 
 # EVALUATING YOLOV8 EFFICIENCY ON GPU, CPU AND RASPBERRY PI: STANDARD VS. SEPARABLE CONVOLUTIONS
 
