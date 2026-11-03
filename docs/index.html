@@ -1,271 +1,280 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YOLOv8: standard vs. separable convolutions on GPU, CPU and Raspberry Pi</title>
-<meta name="description" content="Separable convolutions cost 17% of mAP50 on COCO2017, change nothing on a desktop, and make YOLOv8 ~10x faster on a Raspberry Pi.">
-<style>
-  :root { --bg:#FBFAF8; --surface:#FFF; --ink:#23201D; --muted:#6B645D; --line:#E3DED7; --accent:#B5553D; --good:#2F7D5B; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --bg:#171614; --surface:#201E1B; --ink:#EDE9E3; --muted:#A9A29A; --line:#322E2A; --accent:#D9765C; --good:#5DBB8E; } }
-  :root[data-theme="dark"] { --bg:#171614; --surface:#201E1B; --ink:#EDE9E3; --muted:#A9A29A; --line:#322E2A; --accent:#D9765C; --good:#5DBB8E; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink);
-    font:16px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; -webkit-font-smoothing:antialiased; }
-  .wrap { max-width:900px; margin:0 auto; padding:0 16px 88px; }
-  header { padding:60px 0 32px; border-bottom:1px solid var(--line); margin-bottom:36px; }
-  .eyebrow { font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 10px; }
-  h1 { font-size:clamp(1.7rem,5vw,2.4rem); line-height:1.16; margin:0 0 18px; letter-spacing:-.02em; }
-  .lede { font-size:clamp(1rem,2.3vw,1.12rem); color:var(--muted); margin:0 0 22px; max-width:64ch; }
-  .lede strong { color:var(--ink); }
-  .links a { display:inline-block; margin:0 9px 9px 0; padding:9px 15px; border:1px solid var(--line);
-    border-radius:7px; text-decoration:none; color:var(--ink); background:var(--surface); font-size:.9rem; transition:border-color .15s; }
-  .links a:hover { border-color:var(--accent); }
-  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin:28px 0 0; }
-  .kpi { background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:16px; }
-  .kpi b { display:block; font-size:1.75rem; line-height:1.1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
-  .kpi span { font-size:.85rem; color:var(--muted); }
-  h2 { font-size:1.3rem; margin:48px 0 10px; padding-top:12px; border-top:1px solid var(--line); letter-spacing:-.01em; }
-  h3 { font-size:1.02rem; margin:26px 0 6px; }
-  figure { margin:22px 0; }
-  figure img { width:100%; height:auto; display:block; border:1px solid var(--line); border-radius:9px; background:#fff; }
-  figcaption { font-size:.85rem; color:var(--muted); margin-top:9px; max-width:70ch; }
-  p, li { max-width:70ch; }
-  p { margin:0 0 16px; }
-  ul, ol { padding-left:20px; margin:0 0 16px; }
-  li { margin-bottom:6px; }
-  .tbl { overflow-x:auto; margin:18px 0 8px; border:1px solid var(--line); border-radius:9px; background:var(--surface); }
-  table { border-collapse:collapse; width:100%; font-size:.9rem; font-variant-numeric:tabular-nums; }
-  th, td { padding:9px 12px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
-  th:first-child, td:first-child { text-align:left; white-space:normal; }
-  thead th { font-weight:600; color:var(--muted); font-size:.8rem; }
-  tbody tr:last-child td { border-bottom:0; }
-  td.win { color:var(--good); font-weight:600; }
-  tr.hl td { background:color-mix(in srgb, var(--accent) 8%, transparent); }
-  .note { font-size:.85rem; color:var(--muted); }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  @media (max-width:640px){ .grid2 { grid-template-columns:1fr; } }
-  code { background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:1px 5px; font-size:.86em;
-    font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
-  footer { margin-top:60px; padding-top:22px; border-top:1px solid var(--line); font-size:.86rem; color:var(--muted); }
-  a { color:var(--accent); }
-</style>
+<title>YOLOv8: convoluciones estándar vs. separables en GPU, CPU y Raspberry Pi</title>
+<meta name="description" content="Tesis de Ciencia de Datos: las convoluciones separables cuestan 17% de mAP50 en COCO2017, no cambian nada en un PC y hacen a YOLOv8 ~10 veces más rápido en una Raspberry Pi.">
+<link rel="alternate" hreflang="es" href="https://rxyxs.github.io/yolov8-separable-convolutions/">
+<link rel="alternate" hreflang="en" href="https://rxyxs.github.io/yolov8-separable-convolutions/en/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
+<div class="topbar"><div class="in">
+<a class="brand" href="#">YOLOv8 · Separable</a>
+<nav class="nav">
+<a href="#resumen">Resumen</a><a href="#problema">Problema</a><a href="#fundamentos">Fundamentos</a>
+<a href="#metodologia">Metodología</a><a href="#resultados">Resultados</a><a href="#raspberry">Raspberry Pi</a><a href="#conclusiones">Conclusiones</a>
+</nav>
+<div class="lang"><span>ES</span><a href="en/" hreflang="en" lang="en">EN</a></div>
+</div></div>
+
 <div class="wrap">
-<header>
-<p class="eyebrow">Engineering thesis · Universidad Mayor · April 2026</p>
-<h1>YOLOv8 with standard vs. separable convolutions on GPU, CPU and Raspberry Pi</h1>
-<p class="lede">Two YOLOv8 detectors trained from scratch in TensorFlow/Keras on COCO2017 (118,287 training images, 5,000 validation).
-Swapping <code>Conv2D</code> for <code>SeparableConv2D</code> <strong>costs 17% of mAP50</strong> and changes almost nothing on a desktop,
-but on a Raspberry Pi it is the difference between <strong>one frame every 14 seconds and one every 1.5</strong>.</p>
-<div class="links">
-<a href="tesis_yolov8_separable.pdf">Full thesis (PDF, Spanish, 22 MB)</a>
-<a href="https://github.com/Rxyxs/yolov8-separable-convolutions">Code and notebooks</a>
-<a href="https://github.com/Rxyxs/yolov8-separable-convolutions#readme">README (EN)</a>
-<a href="https://github.com/Rxyxs/yolov8-separable-convolutions/blob/main/README.es.md">README (ES)</a>
+<header class="hero">
+<p class="eyebrow">Tesis de Ciencia de Datos · Universidad Mayor · 2026</p>
+<h1>Evaluación de la eficiencia de YOLOv8 en GPU, CPU y Raspberry Pi</h1>
+<p class="lede">Dos detectores YOLOv8 implementados desde cero en TensorFlow/Keras y entrenados sobre COCO2017: uno con convoluciones estándar (<code>Conv2D</code>) y otro con convoluciones separables en profundidad (<code>SeparableConv2D</code>). El modelo separable pierde 17% de mAP50 y en un PC corre igual de rápido, pero en una Raspberry Pi pasa de una imagen cada 14 segundos a una cada 1,5.</p>
+<p class="meta">Pablo Vicente Reyes Pino · Profesor guía: Dr. Anthony D. Cho · Profesor revisor: Carlos Muñoz · Defendida el 24 de julio de 2026</p>
+<div class="btns">
+<a class="btn primary" href="tesis_yolov8_separable.pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>Tesis completa (PDF, 22 MB)</a>
+<a class="btn" href="https://github.com/Rxyxs/yolov8-separable-convolutions"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 016 0C17.3 4.7 18.3 5 18.3 5c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0012 .5z"/></svg>Código y notebooks</a>
+<a class="btn" href="https://github.com/Rxyxs/yolov8-separable-convolutions/blob/main/README.es.md">README</a>
 </div>
 <div class="kpis">
-<div class="kpi"><b>−68%</b><span>parameters (3.99 M → 1.26 M)</span></div>
-<div class="kpi"><b>0.212 → 0.175</b><span>mAP50 on COCO2017 val</span></div>
-<div class="kpi"><b>≈ same</b><span>FPS on desktop CPU and GPU</span></div>
-<div class="kpi"><b>0.07 → 0.68</b><span>FPS on Raspberry Pi 4 (~10×)</span></div>
+<div class="kpi"><span class="v">−68%</span><span class="l">parámetros: 3,99 M → 1,26 M</span></div>
+<div class="kpi"><span class="v">0,212 → 0,175</span><span class="l">mAP50 en validación COCO2017</span></div>
+<div class="kpi"><span class="v">≈ igual</span><span class="l">velocidad en CPU y GPU de escritorio</span></div>
+<div class="kpi hl"><span class="v">9,4× más rápido</span><span class="l">en Raspberry Pi: 13,9 s → 1,48 s por imagen</span></div>
 </div>
 </header>
 
-<h2>The problem in plain terms</h2>
-<p>An object detector looks at an image and returns a box and a label for every object it recognises: "person here, bicycle there". YOLO (<em>You Only Look Once</em>) does it in a single pass through a convolutional network, which is why it is the usual choice for real-time video: driver assistance, anti-collision systems, surveillance cameras, inspection on a production line.</p>
-<p>The catch is cost. Most of the arithmetic in YOLO happens in convolution layers, and a model that runs smoothly on a gaming GPU can be unusable on a small, cheap, low-power board mounted on a vehicle or a camera, which is exactly where these systems need to live. This thesis asks a concrete question: <b>if we replace YOLOv8's standard convolutions with a cheaper kind, how much accuracy do we lose and how much speed do we gain, and does the answer change with the hardware?</b></p>
+<section id="resumen">
+<p class="sec-num">01 · Resumen</p>
+<h2>El resultado depende del hardware</h2>
+<p>La pregunta era si una convolución más liviana gana suficiente velocidad como para justificar la precisión que sacrifica. La respuesta cambia según dónde corre el modelo.</p>
+<div class="cols3">
+<div class="card"><span class="tag warn">PC de escritorio</span><h3>No conviene</h3><p>Con una RTX 4060 Ti, o solo con el Ryzen, ambos modelos corren igual (5,4–5,5 FPS en GPU, 2,3–2,4 en CPU). El cuello de botella es la carga de datos y TensorFlow, no los parámetros, así que Conv2D conserva su ventaja en calidad sin costo.</p></div>
+<div class="card"><span class="tag good">Raspberry Pi</span><h3>Es decisivo</h3><p>Sin GPU, Conv2D tarda 13,9 s por imagen con ±1,5 s de variación; el separable tarda 1,48 s con ±0,01 s. Más rápido <em>y</em> estable, que es lo que necesita un sistema embebido que opera de forma continua.</p></div>
+<div class="card"><span class="tag info">Precisión</span><h3>La brecha es de arquitectura</h3><p>El modelo separable se entrenó el doble de épocas (100 contra 50) y aun así quedó bajo Conv2D en todas las métricas de calidad. No le faltó entrenamiento: le falta capacidad.</p></div>
+</div>
+</section>
 
+<section id="problema">
+<p class="sec-num">02 · Problema</p>
+<h2>Detectar objetos en hardware de bajo costo</h2>
+<p>Un detector de objetos recibe una imagen y devuelve una caja y una etiqueta por cada objeto que reconoce: "persona aquí, bicicleta allá". YOLO (<em>You Only Look Once</em>) lo hace en una sola pasada por una red convolucional, por eso es la opción habitual para video en tiempo real: asistencia a la conducción, sistemas anticolisión, cámaras de vigilancia o inspección en una línea de producción.</p>
+<p>El problema es el costo. Casi todo el cálculo de YOLO ocurre en las capas de convolución, y un modelo que corre fluido en una GPU de escritorio puede ser inservible en una placa pequeña, barata y de bajo consumo montada en un vehículo o una cámara, que es justamente donde estos sistemas tienen que operar.</p>
+<div class="callout"><p>Pregunta de investigación: si se reemplazan las convoluciones estándar de YOLOv8 por convoluciones separables, ¿cuánta precisión se pierde, cuánta velocidad se gana y cambia la respuesta según el hardware?</p></div>
 <figure>
-<img src="figures/figura1_ejemplo_yolo.png" alt="Semantic segmentation, classification and localization, object detection, instance segmentation" loading="lazy">
-<figcaption>Where object detection sits among vision tasks: unlike classification it handles several objects per image, and unlike segmentation it returns boxes, not pixel masks.</figcaption>
+<img src="figures/figura1_ejemplo_yolo.png" alt="Segmentación semántica, clasificación y localización, detección de objetos y segmentación de instancias" loading="lazy">
+<figcaption>Figura 1. La detección de objetos entre las tareas de visión: a diferencia de la clasificación maneja varios objetos por imagen, y a diferencia de la segmentación entrega cajas, no máscaras de píxeles.</figcaption>
 </figure>
+<div class="cols">
+<div class="card"><h3>Objetivos</h3><ul>
+<li>Analizar la arquitectura de YOLOv8 y las técnicas que introduce.</li>
+<li>Desarrollar dos versiones: la clásica con <code>Conv2D</code> y una modificada con <code>SeparableConv2D</code>.</li>
+<li>Evaluarlas en precisión, velocidad de inferencia y eficiencia computacional.</li>
+<li>Compararlas en hardware reducido (Raspberry Pi) frente a CPU y GPU de escritorio.</li></ul></div>
+<div class="card"><h3>Hipótesis</h3><p>Los modelos de Deep Learning adaptados para hardware reducido tendrán una precisión mayor que los modelos tradicionales <em>en función de los recursos disponibles</em>, comparando métricas específicas de rendimiento (mAP, precisión, velocidad y eficiencia).</p><p class="note">El contraste de la hipótesis está en <a href="#conclusiones">Conclusiones</a>.</p></div>
+</div>
+</section>
 
-<h2>What the project set out to do</h2>
-<h3>Objectives</h3>
-<ul>
-<li>Analyse the YOLOv8 architecture and the techniques it introduces over earlier YOLO versions.</li>
-<li>Build two versions of the model from scratch: the classic one with <code>Conv2D</code> and a modified one with <code>SeparableConv2D</code>.</li>
-<li>Measure both on accuracy, inference speed and computational efficiency.</li>
-<li>Compare them on reduced hardware, a Raspberry Pi, against a desktop CPU and GPU.</li>
-</ul>
-<h3>Hypothesis</h3>
-<p>Deep learning models adapted to reduced hardware deliver more accuracy <em>for the resources available</em> than traditional models, measured on specific performance metrics (mAP, precision, speed, efficiency). The verdict is at the end of the page.</p>
-
-<h3>Context: how detectors got here</h3>
-<div class="tbl"><table>
-<thead><tr><th>Family</th><th>What it brought</th><th>What it costs</th></tr></thead>
-<tbody>
-<tr><td>SIFT / HOG</td><td>Hand-crafted features, consistent in stable scenes</td><td>Break with lighting, rotation, clutter</td></tr>
-<tr><td>AlexNet and CNNs (2012)</td><td>Features learned from data</td><td>Large datasets and compute</td></tr>
-<tr><td>R-CNN family</td><td>Region proposals + classification</td><td>Multi-stage, slow</td></tr>
-<tr><td>YOLO (2015 →)</td><td>Boxes and classes in one pass, real time</td><td>Weaker on small objects</td></tr>
-<tr><td>SSD / FPN</td><td>Multi-scale detection</td><td>Lower accuracy in some scenes</td></tr>
-<tr><td>Transformers (DETR)</td><td>Global context</td><td>Heavy to train and deploy</td></tr>
-</tbody></table></div>
-<p>Separable convolutions are the trick behind MobileNet and Xception and have been tried on YOLOv3-Lite, YOLOv5 variants and YOLOv7's ELAN blocks. YOLOv8 does not use them out of the box, which is the gap this work tests.</p>
-
-<h2>Why a separable convolution is cheaper</h2>
-<p>A standard 3×3 convolution that turns <i>C</i><sub>in</sub> input channels into <i>C</i><sub>out</sub> output channels learns one 3×3 filter for every input–output pair: <b>9 · C<sub>in</sub> · C<sub>out</sub></b> weights. It looks at space (the 3×3 neighbourhood) and at channels (colour, edges, textures…) at the same time.</p>
-<p>A depthwise separable convolution splits that into two cheaper steps:</p>
-<ul>
-<li><b>Depthwise:</b> one 3×3 filter per input channel, applied to that channel alone. It captures spatial patterns: <b>9 · C<sub>in</sub></b> weights.</li>
-<li><b>Pointwise:</b> a 1×1 convolution that mixes the channels together: <b>C<sub>in</sub> · C<sub>out</sub></b> weights.</li>
-</ul>
-<p>With 128 channels in and out, that is 147,456 weights for the standard layer against 17,536 for the separable one, about <b>8× fewer</b>, with the same drop in multiplications. The price is expressiveness: the network can no longer learn arbitrary combinations of "where" and "which channel" in a single step. Applied to the Head of YOLOv8, the whole model goes from 3.99 M to 1.26 M parameters.</p>
-
-<h2>How detection quality is measured</h2>
-<ul>
-<li><b>IoU (Intersection over Union):</b> how much a predicted box overlaps the true one, from 0 (no overlap) to 1 (identical). A prediction counts as correct only if its IoU passes a threshold.</li>
-<li><b>Precision:</b> of the boxes the model drew, the share that were real objects. Low precision means false alarms.</li>
-<li><b>Recall:</b> of the real objects in the image, the share the model found. Low recall means missed objects.</li>
-<li><b>mAP50:</b> the area under the precision–recall curve, averaged over COCO's 80 classes, with a correct-box threshold of IoU ≥ 0.5. It is the headline number for comparing detectors.</li>
-<li><b>FPS and time per image:</b> how fast inference runs; the standard deviation of the time tells you how predictable that speed is, which matters for anything real-time.</li>
-</ul>
-
-<h2>How the experiment was run</h2>
-<p>A quantitative comparative design: both models go through exactly the same pipeline, so any difference comes from the architecture, not from the data or the evaluation.</p>
-<figure>
-<img src="figures/figura5_proceso_entrenamiento.png" alt="Pipeline: data preparation, training of two models, validation, inference on CPU/GPU/Raspberry Pi, comparison" loading="lazy">
-<figcaption>Data preparation → training of both models → validation → inference on CPU, GPU and Raspberry Pi → comparison of mAP, precision, speed and efficiency.</figcaption>
-</figure>
-<div class="tbl"><table>
-<thead><tr><th>Setting</th><th>Value</th></tr></thead>
-<tbody>
-<tr><td>Dataset</td><td>COCO2017 (public benchmark)</td></tr>
-<tr><td>Train / validation</td><td>118,287 / 5,000 images</td></tr>
-<tr><td>Classes</td><td>80</td></tr>
-<tr><td>Input size</td><td>640 × 640 × 3</td></tr>
-<tr><td>Annotations</td><td>Converted to YOLOv8 format, same preprocessing for both models</td></tr>
-<tr><td>Framework</td><td>TensorFlow / Keras, implemented from scratch (no Ultralytics weights)</td></tr>
-<tr><td>Epoch budget</td><td>Chosen by mAP checked every 10 epochs: 50 (Conv2D), 100 (Separable)</td></tr>
-<tr><td>Deployment on the Pi</td><td>TensorFlow Lite</td></tr>
-</tbody></table></div>
-<ol>
-<li><b>Implement YOLOv8</b> in Keras following the published architecture: Backbone with C2f blocks and SPPF, Neck with upsampling and concatenation across three scales, decoupled Head with separate box and class branches.</li>
-<li><b>Build the separable variant</b> by replacing the <code>Conv2D</code> layers of the prediction Head with <code>SeparableConv2D</code>, leaving the feature extractor intact. Parameters drop from 3,991,584 to 1,258,715.</li>
-<li><b>Train both on COCO2017</b> with checkpoints after every epoch. At 10–12 hours per epoch this took weeks of GPU time, and the checkpoints are what made it survive power cuts and code failures without losing progress.</li>
-<li><b>Validate</b> on the 5,000 COCO images: mAP50, mean IoU, precision, recall, and qualitative detections on the same images for both models.</li>
-<li><b>Measure inference</b> on the desktop CPU, the desktop GPU and the Raspberry Pi, recording mean time per image and its standard deviation.</li>
-</ol>
-
-<h3>The three blocks of YOLOv8</h3>
-<ul>
-<li><b>Backbone, feature extraction:</b> turns the image into feature maps at several resolutions.</li>
-<li><b>Neck, multi-scale fusion:</b> mixes fine spatial detail with coarse context so the model sees both small and large objects.</li>
-<li><b>Head, predictions:</b> for each of three scales, one branch regresses boxes and another classifies them. This is where the separable layers go.</li>
-</ul>
-
-<h2>The finding</h2>
-<p>The question was whether a lighter convolution buys enough speed to justify the accuracy it gives up. The answer depends entirely on the hardware:</p>
-<ul>
-<li><b>On a desktop it does not pay.</b> With an RTX 4060 Ti, or even on the Ryzen CPU alone, both models run at the same speed (5.4–5.5 FPS on GPU, 2.3–2.4 on CPU). The bottleneck there is data loading, host–GPU transfers and the TensorFlow runtime, not the parameter count, so the 68% reduction buys nothing and Conv2D keeps its quality edge.</li>
-<li><b>On the Raspberry Pi it is decisive.</b> Without a GPU, Conv2D needs 13.9 s per image and its latency swings by ±1.5 s; the separable model needs 1.48 s with ±0.01 s. Faster <em>and</em> stable, which is what a continuously running edge system needs.</li>
-<li><b>The accuracy gap is architectural, not undertraining.</b> The separable model got twice the epochs (100 vs. 50) and still finished below Conv2D on every quality metric.</li>
-</ul>
-
-<h2>Results on COCO2017 validation</h2>
-<div class="tbl"><table>
-<thead><tr><th>Metric</th><th>YOLOv8-Conv2D</th><th>YOLOv8-Separable</th></tr></thead>
-<tbody>
-<tr><td>Training epochs</td><td>50</td><td>100</td></tr>
-<tr><td>Parameters</td><td>3,991,584 (15.2 MB)</td><td class="win">1,258,715 (4.8 MB)</td></tr>
-<tr><td>mAP50</td><td class="win">0.2119</td><td>0.1751</td></tr>
-<tr><td>Mean IoU</td><td class="win">0.8367</td><td>0.8302</td></tr>
-<tr><td>Precision</td><td class="win">0.6836</td><td>0.6734</td></tr>
-<tr><td>Recall</td><td class="win">0.3260</td><td>0.2933</td></tr>
-<tr><td>Inference, desktop CPU (FPS)</td><td>2.34</td><td>2.41</td></tr>
-<tr><td>Inference, desktop GPU (FPS)</td><td>5.48</td><td>5.36</td></tr>
-<tr class="hl"><td>Inference, Raspberry Pi (FPS)</td><td>0.07</td><td class="win">0.68</td></tr>
-<tr><td>Time per image, CPU (s, mean ± sd)</td><td>0.4273 ± 0.0207</td><td>0.4156 ± 0.0136</td></tr>
-<tr><td>Time per image, GPU (s, mean ± sd)</td><td>0.1824 ± 0.0169</td><td>0.1866 ± 0.1671</td></tr>
-<tr class="hl"><td>Time per image, Raspberry Pi (s, mean ± sd)</td><td>13.9322 ± 1.5230</td><td class="win">1.4754 ± 0.0142</td></tr>
-</tbody></table></div>
-<p class="note">Both models share data, input size (640×640), metrics and validation split; only the convolution type in the Head changes.</p>
-
-<h3>Reading the table</h3>
-<ul>
-<li><b>Quality:</b> Conv2D wins every quality metric. The biggest gap is in recall (0.326 vs. 0.293): the separable model mostly <em>misses</em> objects rather than drawing wrong boxes, since precision and IoU are nearly tied. When it finds something, it locates it almost as well.</li>
-<li><b>Desktop speed:</b> a 68% smaller model runs at the same speed. Fewer multiplications only help if multiplications are the bottleneck; on a modern GPU they are not, the time goes into moving images to the GPU and into framework overhead. Separable convolutions are also less efficient per operation on GPUs, which eats the remaining theoretical advantage.</li>
-<li><b>Raspberry Pi speed:</b> here every multiplication runs on a 1.5 GHz ARM CPU and memory bandwidth is scarce, so the 8× cheaper layers translate almost directly into speed: 9.4× more FPS. The variance matters as much: Conv2D's latency jumps between roughly 12 and 15 s per frame, the separable model is steady to the hundredth of a second.</li>
-</ul>
-
-<h2>Test hardware</h2>
-<div class="tbl"><table>
-<thead><tr><th>Component</th><th>Desktop</th><th>Raspberry Pi 4</th></tr></thead>
-<tbody>
-<tr><td>Processor</td><td>Ryzen 7 5700X (8C/16T, 3.4 GHz)</td><td>BCM2711, ARM Cortex-A72 1.5 GHz</td></tr>
-<tr><td>GPU</td><td>RTX 4060 Ti (8 GB GDDR6)</td><td>None (CPU with NEON SIMD)</td></tr>
-<tr><td>RAM</td><td>32 GB DDR4-3200</td><td>8 GB LPDDR4-2133</td></tr>
-<tr><td>Power</td><td>65 W CPU + 160 W GPU</td><td>≈ 7 W</td></tr>
-<tr><td>Runtime</td><td>TensorFlow + CUDA</td><td>TensorFlow Lite</td></tr>
-</tbody></table></div>
-
-<h2>What changes in the architecture</h2>
-<p>A standard convolution filters space and channels at once. A depthwise separable one splits that into a per-channel spatial filter (depthwise) followed by a 1×1 channel mix (pointwise), the same idea behind MobileNet and Xception. Here the swap is applied to the prediction Head; the backbone is unchanged.</p>
-<figure>
-<img src="figures/figura2_arquitectura_yolov8.png" alt="YOLOv8 architecture: Backbone, Neck and Head" loading="lazy">
-<figcaption>Standard YOLOv8 as implemented (after Terven et al., 2023): 640×640×3 input, four backbone stages, multi-scale fusion in the Neck and three decoupled prediction branches in the Head.</figcaption>
-</figure>
-<div class="grid2">
+<section id="fundamentos">
+<p class="sec-num">03 · Fundamentos</p>
+<h2>Por qué una convolución separable es más barata</h2>
+<div class="cols">
+<div class="card"><span class="tag info">Conv2D estándar</span><p>Aprende un filtro 3×3 por cada par de canal de entrada y de salida. Mira el espacio (el vecindario 3×3) y los canales (color, bordes, texturas) al mismo tiempo.</p><div class="formula">pesos = 9 · C<sub>in</sub> · C<sub>out</sub></div></div>
+<div class="card"><span class="tag good">SeparableConv2D</span><p>Lo divide en dos pasos: depthwise, un filtro 3×3 por canal que capta patrones espaciales, y pointwise, una convolución 1×1 que mezcla los canales.</p><div class="formula">pesos = 9 · C<sub>in</sub> + C<sub>in</sub> · C<sub>out</sub></div></div>
+</div>
+<p>Con 128 canales de entrada y de salida, la capa estándar tiene 147.456 pesos y la separable 17.536: unas 8 veces menos, con la misma caída en multiplicaciones. El precio es expresividad: la red ya no puede aprender en un solo paso cualquier combinación de "dónde" y "qué canal". Es la idea detrás de MobileNet y Xception.</p>
+<div class="cols">
 <figure>
 <img src="figures/figura3_conv2d_vs_separable.png" alt="Conv2D vs SeparableConv2D" loading="lazy">
-<figcaption>Conv2D vs. SeparableConv2D.</figcaption>
+<figcaption>Figura 2. Conv2D frente a SeparableConv2D.</figcaption>
 </figure>
 <figure>
-<img src="figures/figura4_procesos_convolucion.png" alt="Standard vs separable convolution process" loading="lazy">
-<figcaption>One 3D filter over space and channels (top) vs. depthwise filtering followed by pointwise combination (bottom).</figcaption>
+<img src="figures/figura4_procesos_convolucion.png" alt="Proceso de convolución estándar y separable" loading="lazy">
+<figcaption>Figura 3. Un filtro 3D sobre espacio y canales (arriba) frente a filtrado por canal seguido de combinación 1×1 (abajo).</figcaption>
 </figure>
 </div>
 
-<h2>Choosing the number of epochs</h2>
-<p>Each epoch over COCO2017, training plus validation, took 10–12 hours on the RTX 4060 Ti, so the epoch budget was chosen by checking mAP every 10 epochs. Conv2D peaks at epoch 50 and then degrades (overfitting). The separable model converges more slowly and noisily, settling around epoch 100.</p>
+<h3>La arquitectura de YOLOv8</h3>
+<div class="cols3">
+<div class="def"><h4>Backbone</h4><span>Extrae mapas de características a varias resoluciones a partir de la imagen (bloques C2f y SPPF).</span></div>
+<div class="def"><h4>Neck</h4><span>Fusiona detalle espacial fino con contexto global para ver objetos pequeños y grandes.</span></div>
+<div class="def"><h4>Head</h4><span>En tres escalas, una rama predice cajas y otra las clases. Aquí se insertan las capas separables.</span></div>
+</div>
 <figure>
-<img src="figures/figura6_map_epocas.png" alt="mAP every 10 epochs for both models" loading="lazy">
-<figcaption>mAP every 10 epochs. (a) YOLOv8-Conv2D, best at 50. (b) YOLOv8-Separable, best around 100.</figcaption>
+<img src="figures/figura2_arquitectura_yolov8.png" alt="Arquitectura de YOLOv8: Backbone, Neck y Head" loading="lazy">
+<figcaption>Figura 4. YOLOv8 estándar tal como se implementó (según Terven et al., 2023): entrada de 640×640×3, cuatro etapas en el Backbone, fusión multiescala en el Neck y tres ramas de predicción desacopladas en el Head.</figcaption>
 </figure>
 
-<h2>Detections side by side</h2>
-<p>Same validation images, ground truth in red and predictions in yellow. Conv2D keeps tighter, more stable boxes on small and medium objects; the separable model misses more of them, which is where its lower recall comes from.</p>
+<h3>Cómo se mide la calidad de un detector</h3>
+<div class="defs">
+<div class="def"><h4>IoU</h4><span>Cuánto se superpone la caja predicha con la real, de 0 a 1. Una predicción cuenta como correcta si supera un umbral.</span></div>
+<div class="def"><h4>Precisión</h4><span>De las cajas que dibujó el modelo, qué fracción eran objetos reales. Baja precisión = falsas alarmas.</span></div>
+<div class="def"><h4>Recall</h4><span>De los objetos reales de la imagen, qué fracción encontró. Bajo recall = objetos perdidos.</span></div>
+<div class="def"><h4>mAP50</h4><span>Área bajo la curva precisión-recall, promediada en las 80 clases de COCO, con umbral IoU ≥ 0,5.</span></div>
+<div class="def"><h4>FPS y tiempo por imagen</h4><span>Velocidad de inferencia. La desviación estándar indica qué tan predecible es, clave en tiempo real.</span></div>
+</div>
+
+<h3>Contexto: la evolución de los detectores</h3>
+<div class="tbl left"><table>
+<thead><tr><th>Familia</th><th>Qué aportó</th><th>Limitación</th></tr></thead>
+<tbody>
+<tr><td>SIFT / HOG</td><td>Características manuales, consistentes en escenas estables</td><td>Fallan con cambios de iluminación, rotación y escenas dinámicas</td></tr>
+<tr><td>AlexNet y CNN (2012)</td><td>Características aprendidas de los datos</td><td>Requieren muchos datos y cómputo</td></tr>
+<tr><td>Familia R-CNN</td><td>Propuestas de regiones + clasificación</td><td>Varias etapas, lentas</td></tr>
+<tr><td>YOLO (2015 →)</td><td>Cajas y clases en una sola pasada, tiempo real</td><td>Más débil con objetos pequeños</td></tr>
+<tr><td>SSD / FPN</td><td>Detección multiescala</td><td>Menor precisión en ciertos escenarios</td></tr>
+<tr><td>Transformers (DETR)</td><td>Contexto global de la imagen</td><td>Costosos de entrenar y desplegar</td></tr>
+</tbody></table></div>
+<p>Las convoluciones separables ya se habían probado en YOLOv3-Lite, en variantes de YOLOv5 y en los bloques ELAN de YOLOv7. YOLOv8 no las incluye de fábrica: ese es el vacío que prueba esta tesis.</p>
+</section>
+
+<section id="metodologia">
+<p class="sec-num">04 · Metodología</p>
+<h2>Cómo se hizo el experimento</h2>
+<p>Diseño cuantitativo comparativo: ambos modelos pasan exactamente por el mismo flujo, de modo que cualquier diferencia se deba a la arquitectura y no a los datos ni a la evaluación.</p>
 <figure>
-<img src="figures/figura7_deteccion_conv2d.png" alt="Detections by YOLOv8-Conv2D after 50 epochs" loading="lazy">
-<figcaption>YOLOv8-Conv2D, 50 epochs.</figcaption>
+<img src="figures/figura5_proceso_entrenamiento.png" alt="Flujo: preparación de datos, entrenamiento de dos modelos, validación, inferencia en CPU/GPU/Raspberry Pi, comparación" loading="lazy">
+<figcaption>Figura 5. Preparación de datos → entrenamiento de ambos modelos → validación → inferencia en CPU, GPU y Raspberry Pi → comparación de mAP, precisión, velocidad y eficiencia.</figcaption>
+</figure>
+<ol class="steps">
+<li>Implementar YOLOv8 en Keras siguiendo la arquitectura publicada: Backbone con bloques C2f y SPPF, Neck con upsampling y concatenación en tres escalas, Head desacoplado con ramas separadas para cajas y clases.</li>
+<li>Construir la variante separable reemplazando las capas <code>Conv2D</code> del Head de predicción por <code>SeparableConv2D</code>, sin tocar el extractor de características. Los parámetros bajan de 3.991.584 a 1.258.715.</li>
+<li>Entrenar ambos en COCO2017 guardando checkpoints en cada época. Con 10–12 horas por época fueron semanas de GPU, y los checkpoints permitieron sobrevivir a cortes de luz y errores de código sin perder avance.</li>
+<li>Elegir el número de épocas revisando el mAP cada 10 épocas: 50 para Conv2D y 100 para el separable.</li>
+<li>Validar sobre las 5.000 imágenes de COCO: mAP50, IoU promedio, precisión, recall y detecciones cualitativas sobre las mismas imágenes.</li>
+<li>Medir la inferencia en la CPU y la GPU de escritorio y en la Raspberry Pi (con TensorFlow Lite), registrando el tiempo medio por imagen y su desviación estándar.</li>
+</ol>
+<div class="cols">
+<div class="tbl left"><table>
+<thead><tr><th colspan="2">Datos y entrenamiento</th></tr></thead>
+<tbody>
+<tr><td>Dataset</td><td>COCO2017 (benchmark público)</td></tr>
+<tr><td>Entrenamiento / validación</td><td>118.287 / 5.000 imágenes</td></tr>
+<tr><td>Clases</td><td>80</td></tr>
+<tr><td>Entrada</td><td>640 × 640 × 3</td></tr>
+<tr><td>Anotaciones</td><td>Formato YOLOv8, mismo preprocesamiento para ambos</td></tr>
+<tr><td>Framework</td><td>TensorFlow / Keras, desde cero (sin pesos preentrenados)</td></tr>
+<tr><td>Costo</td><td>10–12 h por época en RTX 4060 Ti</td></tr>
+</tbody></table></div>
+<div class="tbl left"><table>
+<thead><tr><th>Hardware</th><th>PC escritorio</th><th>Raspberry Pi 4</th></tr></thead>
+<tbody>
+<tr><td>CPU</td><td>Ryzen 7 5700X, 8C/16T 3,4 GHz</td><td>BCM2711, Cortex-A72 1,5 GHz</td></tr>
+<tr><td>GPU</td><td>RTX 4060 Ti, 8 GB</td><td>Sin GPU (NEON SIMD)</td></tr>
+<tr><td>RAM</td><td>32 GB DDR4-3200</td><td>8 GB LPDDR4-2133</td></tr>
+<tr><td>Consumo</td><td>65 W CPU + 160 W GPU</td><td>≈ 7 W</td></tr>
+<tr><td>Runtime</td><td>TensorFlow + CUDA</td><td>TensorFlow Lite</td></tr>
+</tbody></table></div>
+</div>
+</section>
+
+<section id="resultados">
+<p class="sec-num">05 · Resultados</p>
+<h2>Resultados en validación COCO2017</h2>
+<div class="tbl"><table>
+<thead><tr><th>Métrica</th><th>YOLOv8-Conv2D</th><th>YOLOv8-Separable</th></tr></thead>
+<tbody>
+<tr class="grp"><td colspan="3">Modelo</td></tr>
+<tr><td>Épocas de entrenamiento</td><td>50</td><td>100</td></tr>
+<tr><td>Parámetros</td><td>3.991.584 (15,2 MB)</td><td class="win">1.258.715 (4,8 MB)</td></tr>
+<tr class="grp"><td colspan="3">Calidad de detección</td></tr>
+<tr><td>mAP50</td><td class="win">0,2119</td><td>0,1751</td></tr>
+<tr><td>IoU promedio</td><td class="win">0,8367</td><td>0,8302</td></tr>
+<tr><td>Precisión</td><td class="win">0,6836</td><td>0,6734</td></tr>
+<tr><td>Recall</td><td class="win">0,3260</td><td>0,2933</td></tr>
+<tr class="grp"><td colspan="3">Velocidad de inferencia</td></tr>
+<tr><td>CPU escritorio (FPS)</td><td>2,34</td><td>2,41</td></tr>
+<tr><td>GPU escritorio (FPS)</td><td>5,48</td><td>5,36</td></tr>
+<tr class="hl"><td>Raspberry Pi (FPS)</td><td>0,07</td><td class="win">0,68</td></tr>
+<tr><td>Tiempo por imagen, CPU (s, media ± d.e.)</td><td>0,4273 ± 0,0207</td><td>0,4156 ± 0,0136</td></tr>
+<tr><td>Tiempo por imagen, GPU (s, media ± d.e.)</td><td>0,1824 ± 0,0169</td><td>0,1866 ± 0,1671</td></tr>
+<tr class="hl"><td>Tiempo por imagen, Raspberry Pi (s, media ± d.e.)</td><td>13,9322 ± 1,5230</td><td class="win">1,4754 ± 0,0142</td></tr>
+</tbody></table></div>
+<p class="note">Ambos modelos comparten datos, tamaño de entrada, métricas y partición de validación; solo cambia el tipo de convolución en el Head.</p>
+
+<div class="bars">
+<h4>Tiempo medio por imagen</h4>
+<p class="sub">Cada plataforma en su propia escala. Menos es mejor.</p>
+<div class="bgroup"><div class="gl">GPU escritorio</div>
+<div class="brow"><span class="n">Conv2D</span><span class="t"><span class="f c" style="width:97.7%;display:block"></span></span><span class="x">0,18 s</span></div>
+<div class="brow"><span class="n">Separable</span><span class="t"><span class="f s" style="width:100%;display:block"></span></span><span class="x">0,19 s</span></div></div>
+<div class="bgroup"><div class="gl">CPU escritorio</div>
+<div class="brow"><span class="n">Conv2D</span><span class="t"><span class="f c" style="width:100%;display:block"></span></span><span class="x">0,43 s</span></div>
+<div class="brow"><span class="n">Separable</span><span class="t"><span class="f s" style="width:97.3%;display:block"></span></span><span class="x">0,42 s</span></div></div>
+<div class="bgroup"><div class="gl">Raspberry Pi</div>
+<div class="brow"><span class="n">Conv2D</span><span class="t"><span class="f c" style="width:100%;display:block"></span></span><span class="x">13,93 s</span></div>
+<div class="brow"><span class="n">Separable</span><span class="t"><span class="f s" style="width:10.6%;display:block"></span></span><span class="x">1,48 s</span></div></div>
+</div>
+
+<h3>Cómo leer la tabla</h3>
+<div class="cols3">
+<div class="card"><h3>Calidad</h3><p>Conv2D gana en todas las métricas. La mayor brecha está en el recall (0,326 contra 0,293): al modelo separable se le <em>escapan</em> objetos, pero cuando encuentra uno lo ubica casi igual de bien (IoU y precisión casi empatados).</p></div>
+<div class="card"><h3>Velocidad en PC</h3><p>Un modelo 68% más chico corre a la misma velocidad. Menos multiplicaciones solo ayudan si las multiplicaciones son el cuello de botella; en una GPU moderna el tiempo se va en mover imágenes y en el propio runtime.</p></div>
+<div class="card"><h3>Velocidad en la Pi</h3><p>Aquí cada multiplicación corre en una CPU ARM de 1,5 GHz con poco ancho de banda de memoria, así que el ahorro se traduce casi directo en velocidad: 9,4× más FPS y una latencia estable al centésimo de segundo.</p></div>
+</div>
+
+<h3>Elección del número de épocas</h3>
+<p>Conv2D alcanza su mejor mAP en la época 50 y luego empeora (sobreajuste). El modelo separable converge más lento y con más fluctuaciones, y se estabiliza cerca de la época 100.</p>
+<figure>
+<img src="figures/figura6_map_epocas.png" alt="mAP cada 10 épocas para ambos modelos" loading="lazy">
+<figcaption>Figura 6. mAP cada 10 épocas. (a) YOLOv8-Conv2D, mejor en la época 50. (b) YOLOv8-Separable, mejor cerca de la época 100.</figcaption>
+</figure>
+
+<h3>Detecciones lado a lado</h3>
+<p>Mismas imágenes de validación; la verdad de terreno en rojo y las predicciones en amarillo. Conv2D mantiene cajas más ajustadas y estables en objetos pequeños y medianos; el separable deja más objetos sin detectar, de ahí su menor recall.</p>
+<div class="cols">
+<figure>
+<img src="figures/figura7_deteccion_conv2d.png" alt="Detecciones de YOLOv8-Conv2D tras 50 épocas" loading="lazy">
+<figcaption>Figura 7. YOLOv8-Conv2D, 50 épocas.</figcaption>
 </figure>
 <figure>
-<img src="figures/figura8_deteccion_separable.png" alt="Detections by YOLOv8-Separable after 100 epochs" loading="lazy">
-<figcaption>YOLOv8-Separable, 100 epochs, same images.</figcaption>
+<img src="figures/figura8_deteccion_separable.png" alt="Detecciones de YOLOv8-Separable tras 100 épocas" loading="lazy">
+<figcaption>Figura 8. YOLOv8-Separable, 100 épocas, mismas imágenes.</figcaption>
 </figure>
+</div>
+</section>
 
-<h2>Getting it onto the Raspberry Pi</h2>
-<p>Exporting to TensorFlow Lite was not a one-liner. <code>DepthwiseConv2dNative</code> is not among TFLite's built-in ops, so the export needed <em>Select TF Ops</em>, and the graph had to be restructured: pure inference was split from the label encoder and from non-maximum suppression, keeping only the layers needed for prediction. Part of the graph then runs as Flex ops that miss TFLite/XNNPACK optimizations. That hurts the heavier Conv2D graph most, which explains part of its slow and erratic latency on the Pi.</p>
+<section id="raspberry">
+<p class="sec-num">06 · Despliegue</p>
+<h2>Llevar el modelo a la Raspberry Pi</h2>
+<p>Exportar a TensorFlow Lite no fue directo. La operación <code>DepthwiseConv2dNative</code> no está entre los operadores nativos de TFLite, así que hubo que habilitar <em>Select TF Ops</em> y reestructurar el grafo: se separó la inferencia pura del codificador de etiquetas y de la supresión de no máximos (NMS), dejando solo las capas necesarias para predecir.</p>
+<p>Con eso el modelo corre en la Pi, pero parte del grafo se ejecuta como operaciones <em>Flex</em>, que no aprovechan todas las optimizaciones de TFLite y XNNPACK. Esto castiga más al grafo Conv2D, más pesado y con más uso de memoria, y explica en parte su latencia alta y errática.</p>
+</section>
 
-<h2>Limitations</h2>
-<ul>
-<li><b>Unequal epochs</b> (50 vs. 100). It favours the separable model, so the quality gap is if anything understated.</li>
-<li><b>Low absolute mAP.</b> Both models were trained from scratch with a compute budget measured in weeks, without a hyperparameter search; they are far below Ultralytics' pretrained YOLOv8 and are meant to compare the two convolutions, not to compete on COCO.</li>
-<li><b>Pi latencies depend on the TFLite conversion path.</b> Read them as relative between models, not as absolute numbers for any deployment.</li>
-<li><b>One dataset, two platforms.</b> Hardware with dedicated accelerators (Jetson, Edge TPU, NPUs) could change the trade-off; that is the natural next step.</li>
-</ul>
-
-<h2>The hypothesis, checked</h2>
-<p><b>Partly confirmed.</b> In absolute terms the adapted model is <em>less</em> accurate: 0.175 vs. 0.212 mAP50, and no amount of extra epochs closed the gap. Relative to the resources it uses, it wins clearly on the device it was designed for: on the Raspberry Pi it delivers 83% of the accuracy at roughly a tenth of the latency and a third of the size, while the standard model is not usable there at all (one frame every 14 s). On a desktop the trade-off does not exist, because the lighter model is not faster.</p>
-
-<h2>What comes next</h2>
-<ul>
-<li><b>Dedicated edge accelerators:</b> Google Edge TPU, NVIDIA Jetson, FPGAs and NPUs, where depthwise operations are supported natively.</li>
-<li><b>Lightweight baselines:</b> compare against detectors built for the edge, such as NanoDet, MobileNet-SSD and PP-YOLO.</li>
-<li><b>Recovering accuracy:</b> fine-tuning, stronger augmentation, quantization or neural architecture search for the separable model.</li>
-<li><b>Field deployment:</b> latency, energy and stability measured in a real application, not on the validation set.</li>
-</ul>
-
-<h2>When to use which</h2>
-<p>If the model runs on a desktop or server GPU, use Conv2D: you keep the accuracy and pay nothing in speed. If it runs on a CPU-only embedded device, use the separable variant: 17% less mAP50 buys a model that is about 10× faster, 3× smaller and has predictable latency, which matters as much as accuracy for anti-collision or continuous monitoring.</p>
+<section id="conclusiones">
+<p class="sec-num">07 · Conclusiones</p>
+<h2>Qué se concluye</h2>
+<div class="callout"><p>Hipótesis: confirmada en parte. En términos absolutos el modelo adaptado es <em>menos</em> preciso (0,175 contra 0,212 de mAP50), y más épocas no cerraron la brecha. Pero en relación con los recursos que usa gana con claridad en el dispositivo para el que fue pensado: en la Raspberry Pi entrega el 83% de la precisión con un décimo de la latencia y un tercio del tamaño, mientras el modelo estándar ahí no es utilizable (una imagen cada 14 s). En un PC el compromiso no existe, porque el modelo liviano no es más rápido.</p></div>
+<div class="cols">
+<div class="card"><span class="tag info">Recomendación</span><h3>Cuándo usar cada modelo</h3><ul>
+<li>GPU de escritorio o servidor: Conv2D. Se conserva la precisión y no se paga nada en velocidad.</li>
+<li>Dispositivo embebido sin GPU: separable. 17% menos de mAP50 a cambio de un modelo unas 10 veces más rápido, 3 veces más chico y con latencia predecible, clave en sistemas anticolisión o de monitoreo continuo.</li></ul></div>
+<div class="card"><span class="tag warn">Limitaciones</span><h3>Alcance del resultado</h3><ul>
+<li>Épocas desiguales (50 contra 100): favorecen al separable, así que la brecha de calidad está, si acaso, subestimada.</li>
+<li>mAP absoluto bajo: ambos modelos se entrenaron desde cero sin búsqueda de hiperparámetros; sirven para comparar las convoluciones, no para competir en COCO.</li>
+<li>Latencias en la Pi dependen de la conversión a TFLite: leerlas como relativas entre modelos.</li>
+<li>Un dataset y dos plataformas.</li></ul></div>
+</div>
+<h3>Trabajo futuro</h3>
+<div class="defs">
+<div class="def"><h4>Aceleradores de borde</h4><span>Google Edge TPU, NVIDIA Jetson, FPGA y NPU, donde las operaciones depthwise tienen soporte nativo.</span></div>
+<div class="def"><h4>Detectores livianos</h4><span>Comparar con modelos diseñados para el borde: NanoDet, MobileNet-SSD y PP-YOLO.</span></div>
+<div class="def"><h4>Recuperar precisión</h4><span>Fine-tuning, más aumentación de datos, cuantización o búsqueda de arquitectura (NAS).</span></div>
+<div class="def"><h4>Despliegue real</h4><span>Medir latencia, energía y estabilidad en una aplicación en terreno, no solo en validación.</span></div>
+</div>
+</section>
 
 <footer>
-<a href="tesis_yolov8_separable.pdf">Download the full thesis (PDF, Spanish)</a><br><br>
-Pablo Vicente Reyes Pino · Engineering thesis, Escuela de Ingeniería Civil en Computación e Informática, Universidad Mayor · Advisor: Dr. Anthony D. Cho · Reviewer: Carlos Muñoz · Defended 24 July 2026<br>
-<a href="https://github.com/Rxyxs/yolov8-separable-convolutions">github.com/Rxyxs/yolov8-separable-convolutions</a> · MIT
+<div class="fg">
+<div>
+<p>Pablo Vicente Reyes Pino</p>
+<p>Tesis de Ciencia de Datos · Escuela de Ingeniería, Facultad de Ciencias, Ingeniería y Tecnología · Universidad Mayor</p>
+<p>Profesor guía: Dr. Anthony D. Cho · Profesor revisor: Carlos Muñoz · Defendida el 24 de julio de 2026</p>
+</div>
+<div>
+<p><a href="tesis_yolov8_separable.pdf">Descargar la tesis (PDF)</a></p>
+<p><a href="https://github.com/Rxyxs/yolov8-separable-convolutions">Repositorio en GitHub</a> · Licencia MIT</p>
+<p><a href="en/" hreflang="en">Read in English</a></p>
+</div>
+</div>
 </footer>
-</div></body></html>
+</div>
+</body>
+</html>
