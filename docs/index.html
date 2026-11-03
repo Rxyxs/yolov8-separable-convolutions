@@ -61,6 +61,7 @@
 Swapping <code>Conv2D</code> for <code>SeparableConv2D</code> <strong>costs 17% of mAP50</strong> and changes almost nothing on a desktop,
 but on a Raspberry Pi it is the difference between <strong>one frame every 14 seconds and one every 1.5</strong>.</p>
 <div class="links">
+<a href="tesis_yolov8_separable.pdf">Full thesis (PDF, Spanish, 22 MB)</a>
 <a href="https://github.com/Rxyxs/yolov8-separable-convolutions">Code and notebooks</a>
 <a href="https://github.com/Rxyxs/yolov8-separable-convolutions#readme">README (EN)</a>
 <a href="https://github.com/Rxyxs/yolov8-separable-convolutions/blob/main/README.es.md">README (ES)</a>
@@ -72,6 +73,28 @@ but on a Raspberry Pi it is the difference between <strong>one frame every 14 se
 <div class="kpi"><b>0.07 → 0.68</b><span>FPS on Raspberry Pi 4 (~10×)</span></div>
 </div>
 </header>
+
+<h2>The problem in plain terms</h2>
+<p>An object detector looks at an image and returns a box and a label for every object it recognises: "person here, bicycle there". YOLO (<em>You Only Look Once</em>) does it in a single pass through a convolutional network, which is why it is the usual choice for real-time video: driver assistance, anti-collision systems, surveillance cameras, inspection on a production line.</p>
+<p>The catch is cost. Most of the arithmetic in YOLO happens in convolution layers, and a model that runs smoothly on a gaming GPU can be unusable on a small, cheap, low-power board mounted on a vehicle or a camera, which is exactly where these systems need to live. This thesis asks a concrete question: <b>if we replace YOLOv8's standard convolutions with a cheaper kind, how much accuracy do we lose and how much speed do we gain, and does the answer change with the hardware?</b></p>
+
+<h2>Why a separable convolution is cheaper</h2>
+<p>A standard 3×3 convolution that turns <i>C</i><sub>in</sub> input channels into <i>C</i><sub>out</sub> output channels learns one 3×3 filter for every input–output pair: <b>9 · C<sub>in</sub> · C<sub>out</sub></b> weights. It looks at space (the 3×3 neighbourhood) and at channels (colour, edges, textures…) at the same time.</p>
+<p>A depthwise separable convolution splits that into two cheaper steps:</p>
+<ul>
+<li><b>Depthwise:</b> one 3×3 filter per input channel, applied to that channel alone. It captures spatial patterns: <b>9 · C<sub>in</sub></b> weights.</li>
+<li><b>Pointwise:</b> a 1×1 convolution that mixes the channels together: <b>C<sub>in</sub> · C<sub>out</sub></b> weights.</li>
+</ul>
+<p>With 128 channels in and out, that is 147,456 weights for the standard layer against 17,536 for the separable one, about <b>8× fewer</b>, with the same drop in multiplications. The price is expressiveness: the network can no longer learn arbitrary combinations of "where" and "which channel" in a single step. Applied to the Neck and Head of YOLOv8, the whole model goes from 3.99 M to 1.26 M parameters.</p>
+
+<h2>How detection quality is measured</h2>
+<ul>
+<li><b>IoU (Intersection over Union):</b> how much a predicted box overlaps the true one, from 0 (no overlap) to 1 (identical). A prediction counts as correct only if its IoU passes a threshold.</li>
+<li><b>Precision:</b> of the boxes the model drew, the share that were real objects. Low precision means false alarms.</li>
+<li><b>Recall:</b> of the real objects in the image, the share the model found. Low recall means missed objects.</li>
+<li><b>mAP50:</b> the area under the precision–recall curve, averaged over COCO's 80 classes, with a correct-box threshold of IoU ≥ 0.5. It is the headline number for comparing detectors.</li>
+<li><b>FPS and time per image:</b> how fast inference runs; the standard deviation of the time tells you how predictable that speed is, which matters for anything real-time.</li>
+</ul>
 
 <h2>The finding</h2>
 <p>The question was whether a lighter convolution buys enough speed to justify the accuracy it gives up. The answer depends entirely on the hardware:</p>
@@ -99,6 +122,13 @@ but on a Raspberry Pi it is the difference between <strong>one frame every 14 se
 <tr class="hl"><td>Time per image, Raspberry Pi (s, mean ± sd)</td><td>13.9322 ± 1.5230</td><td class="win">1.4754 ± 0.0142</td></tr>
 </tbody></table></div>
 <p class="note">Both models share data, input size (640×640), metrics and validation split; only the convolution type in the Neck and Head changes.</p>
+
+<h3>Reading the table</h3>
+<ul>
+<li><b>Quality:</b> Conv2D wins every quality metric. The biggest gap is in recall (0.326 vs. 0.293): the separable model mostly <em>misses</em> objects rather than drawing wrong boxes, since precision and IoU are nearly tied. When it finds something, it locates it almost as well.</li>
+<li><b>Desktop speed:</b> a 68% smaller model runs at the same speed. Fewer multiplications only help if multiplications are the bottleneck; on a modern GPU they are not, the time goes into moving images to the GPU and into framework overhead. Separable convolutions are also less efficient per operation on GPUs, which eats the remaining theoretical advantage.</li>
+<li><b>Raspberry Pi speed:</b> here every multiplication runs on a 1.5 GHz ARM CPU and memory bandwidth is scarce, so the 8× cheaper layers translate almost directly into speed: 9.4× more FPS. The variance matters as much: Conv2D's latency jumps between roughly 12 and 15 s per frame, the separable model is steady to the hundredth of a second.</li>
+</ul>
 
 <h2>Test hardware</h2>
 <div class="tbl"><table>
@@ -161,6 +191,7 @@ but on a Raspberry Pi it is the difference between <strong>one frame every 14 se
 <p>If the model runs on a desktop or server GPU, use Conv2D: you keep the accuracy and pay nothing in speed. If it runs on a CPU-only embedded device, use the separable variant: 17% less mAP50 buys a model that is about 10× faster, 3× smaller and has predictable latency, which matters as much as accuracy for anti-collision or continuous monitoring.</p>
 
 <footer>
+<a href="tesis_yolov8_separable.pdf">Download the full thesis (PDF, Spanish)</a><br><br>
 Pablo Vicente Reyes Pino · Engineering thesis, Escuela de Ingeniería Civil en Computación e Informática, Universidad Mayor · Advisor: Dr. Anthony D. Cho<br>
 <a href="https://github.com/Rxyxs/yolov8-separable-convolutions">github.com/Rxyxs/yolov8-separable-convolutions</a> · MIT
 </footer>
