@@ -33,7 +33,7 @@
   figcaption { font-size:.85rem; color:var(--muted); margin-top:9px; max-width:70ch; }
   p, li { max-width:70ch; }
   p { margin:0 0 16px; }
-  ul { padding-left:20px; margin:0 0 16px; }
+  ul, ol { padding-left:20px; margin:0 0 16px; }
   li { margin-bottom:6px; }
   .tbl { overflow-x:auto; margin:18px 0 8px; border:1px solid var(--line); border-radius:9px; background:var(--surface); }
   table { border-collapse:collapse; width:100%; font-size:.9rem; font-variant-numeric:tabular-nums; }
@@ -78,6 +78,35 @@ but on a Raspberry Pi it is the difference between <strong>one frame every 14 se
 <p>An object detector looks at an image and returns a box and a label for every object it recognises: "person here, bicycle there". YOLO (<em>You Only Look Once</em>) does it in a single pass through a convolutional network, which is why it is the usual choice for real-time video: driver assistance, anti-collision systems, surveillance cameras, inspection on a production line.</p>
 <p>The catch is cost. Most of the arithmetic in YOLO happens in convolution layers, and a model that runs smoothly on a gaming GPU can be unusable on a small, cheap, low-power board mounted on a vehicle or a camera, which is exactly where these systems need to live. This thesis asks a concrete question: <b>if we replace YOLOv8's standard convolutions with a cheaper kind, how much accuracy do we lose and how much speed do we gain, and does the answer change with the hardware?</b></p>
 
+<figure>
+<img src="figures/figura1_ejemplo_yolo.png" alt="Semantic segmentation, classification and localization, object detection, instance segmentation" loading="lazy">
+<figcaption>Where object detection sits among vision tasks: unlike classification it handles several objects per image, and unlike segmentation it returns boxes, not pixel masks.</figcaption>
+</figure>
+
+<h2>What the project set out to do</h2>
+<h3>Objectives</h3>
+<ul>
+<li>Analyse the YOLOv8 architecture and the techniques it introduces over earlier YOLO versions.</li>
+<li>Build two versions of the model from scratch: the classic one with <code>Conv2D</code> and a modified one with <code>SeparableConv2D</code>.</li>
+<li>Measure both on accuracy, inference speed and computational efficiency.</li>
+<li>Compare them on reduced hardware, a Raspberry Pi, against a desktop CPU and GPU.</li>
+</ul>
+<h3>Hypothesis</h3>
+<p>Deep learning models adapted to reduced hardware deliver more accuracy <em>for the resources available</em> than traditional models, measured on specific performance metrics (mAP, precision, speed, efficiency). The verdict is at the end of the page.</p>
+
+<h3>Context: how detectors got here</h3>
+<div class="tbl"><table>
+<thead><tr><th>Family</th><th>What it brought</th><th>What it costs</th></tr></thead>
+<tbody>
+<tr><td>SIFT / HOG</td><td>Hand-crafted features, consistent in stable scenes</td><td>Break with lighting, rotation, clutter</td></tr>
+<tr><td>AlexNet and CNNs (2012)</td><td>Features learned from data</td><td>Large datasets and compute</td></tr>
+<tr><td>R-CNN family</td><td>Region proposals + classification</td><td>Multi-stage, slow</td></tr>
+<tr><td>YOLO (2015 →)</td><td>Boxes and classes in one pass, real time</td><td>Weaker on small objects</td></tr>
+<tr><td>SSD / FPN</td><td>Multi-scale detection</td><td>Lower accuracy in some scenes</td></tr>
+<tr><td>Transformers (DETR)</td><td>Global context</td><td>Heavy to train and deploy</td></tr>
+</tbody></table></div>
+<p>Separable convolutions are the trick behind MobileNet and Xception and have been tried on YOLOv3-Lite, YOLOv5 variants and YOLOv7's ELAN blocks. YOLOv8 does not use them out of the box, which is the gap this work tests.</p>
+
 <h2>Why a separable convolution is cheaper</h2>
 <p>A standard 3×3 convolution that turns <i>C</i><sub>in</sub> input channels into <i>C</i><sub>out</sub> output channels learns one 3×3 filter for every input–output pair: <b>9 · C<sub>in</sub> · C<sub>out</sub></b> weights. It looks at space (the 3×3 neighbourhood) and at channels (colour, edges, textures…) at the same time.</p>
 <p>A depthwise separable convolution splits that into two cheaper steps:</p>
@@ -85,7 +114,7 @@ but on a Raspberry Pi it is the difference between <strong>one frame every 14 se
 <li><b>Depthwise:</b> one 3×3 filter per input channel, applied to that channel alone. It captures spatial patterns: <b>9 · C<sub>in</sub></b> weights.</li>
 <li><b>Pointwise:</b> a 1×1 convolution that mixes the channels together: <b>C<sub>in</sub> · C<sub>out</sub></b> weights.</li>
 </ul>
-<p>With 128 channels in and out, that is 147,456 weights for the standard layer against 17,536 for the separable one, about <b>8× fewer</b>, with the same drop in multiplications. The price is expressiveness: the network can no longer learn arbitrary combinations of "where" and "which channel" in a single step. Applied to the Neck and Head of YOLOv8, the whole model goes from 3.99 M to 1.26 M parameters.</p>
+<p>With 128 channels in and out, that is 147,456 weights for the standard layer against 17,536 for the separable one, about <b>8× fewer</b>, with the same drop in multiplications. The price is expressiveness: the network can no longer learn arbitrary combinations of "where" and "which channel" in a single step. Applied to the Head of YOLOv8, the whole model goes from 3.99 M to 1.26 M parameters.</p>
 
 <h2>How detection quality is measured</h2>
 <ul>
@@ -94,6 +123,39 @@ but on a Raspberry Pi it is the difference between <strong>one frame every 14 se
 <li><b>Recall:</b> of the real objects in the image, the share the model found. Low recall means missed objects.</li>
 <li><b>mAP50:</b> the area under the precision–recall curve, averaged over COCO's 80 classes, with a correct-box threshold of IoU ≥ 0.5. It is the headline number for comparing detectors.</li>
 <li><b>FPS and time per image:</b> how fast inference runs; the standard deviation of the time tells you how predictable that speed is, which matters for anything real-time.</li>
+</ul>
+
+<h2>How the experiment was run</h2>
+<p>A quantitative comparative design: both models go through exactly the same pipeline, so any difference comes from the architecture, not from the data or the evaluation.</p>
+<figure>
+<img src="figures/figura5_proceso_entrenamiento.png" alt="Pipeline: data preparation, training of two models, validation, inference on CPU/GPU/Raspberry Pi, comparison" loading="lazy">
+<figcaption>Data preparation → training of both models → validation → inference on CPU, GPU and Raspberry Pi → comparison of mAP, precision, speed and efficiency.</figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>Setting</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Dataset</td><td>COCO2017 (public benchmark)</td></tr>
+<tr><td>Train / validation</td><td>118,287 / 5,000 images</td></tr>
+<tr><td>Classes</td><td>80</td></tr>
+<tr><td>Input size</td><td>640 × 640 × 3</td></tr>
+<tr><td>Annotations</td><td>Converted to YOLOv8 format, same preprocessing for both models</td></tr>
+<tr><td>Framework</td><td>TensorFlow / Keras, implemented from scratch (no Ultralytics weights)</td></tr>
+<tr><td>Epoch budget</td><td>Chosen by mAP checked every 10 epochs: 50 (Conv2D), 100 (Separable)</td></tr>
+<tr><td>Deployment on the Pi</td><td>TensorFlow Lite</td></tr>
+</tbody></table></div>
+<ol>
+<li><b>Implement YOLOv8</b> in Keras following the published architecture: Backbone with C2f blocks and SPPF, Neck with upsampling and concatenation across three scales, decoupled Head with separate box and class branches.</li>
+<li><b>Build the separable variant</b> by replacing the <code>Conv2D</code> layers of the prediction Head with <code>SeparableConv2D</code>, leaving the feature extractor intact. Parameters drop from 3,991,584 to 1,258,715.</li>
+<li><b>Train both on COCO2017</b> with checkpoints after every epoch. At 10–12 hours per epoch this took weeks of GPU time, and the checkpoints are what made it survive power cuts and code failures without losing progress.</li>
+<li><b>Validate</b> on the 5,000 COCO images: mAP50, mean IoU, precision, recall, and qualitative detections on the same images for both models.</li>
+<li><b>Measure inference</b> on the desktop CPU, the desktop GPU and the Raspberry Pi, recording mean time per image and its standard deviation.</li>
+</ol>
+
+<h3>The three blocks of YOLOv8</h3>
+<ul>
+<li><b>Backbone, feature extraction:</b> turns the image into feature maps at several resolutions.</li>
+<li><b>Neck, multi-scale fusion:</b> mixes fine spatial detail with coarse context so the model sees both small and large objects.</li>
+<li><b>Head, predictions:</b> for each of three scales, one branch regresses boxes and another classifies them. This is where the separable layers go.</li>
 </ul>
 
 <h2>The finding</h2>
@@ -121,7 +183,7 @@ but on a Raspberry Pi it is the difference between <strong>one frame every 14 se
 <tr><td>Time per image, GPU (s, mean ± sd)</td><td>0.1824 ± 0.0169</td><td>0.1866 ± 0.1671</td></tr>
 <tr class="hl"><td>Time per image, Raspberry Pi (s, mean ± sd)</td><td>13.9322 ± 1.5230</td><td class="win">1.4754 ± 0.0142</td></tr>
 </tbody></table></div>
-<p class="note">Both models share data, input size (640×640), metrics and validation split; only the convolution type in the Neck and Head changes.</p>
+<p class="note">Both models share data, input size (640×640), metrics and validation split; only the convolution type in the Head changes.</p>
 
 <h3>Reading the table</h3>
 <ul>
@@ -142,7 +204,7 @@ but on a Raspberry Pi it is the difference between <strong>one frame every 14 se
 </tbody></table></div>
 
 <h2>What changes in the architecture</h2>
-<p>A standard convolution filters space and channels at once. A depthwise separable one splits that into a per-channel spatial filter (depthwise) followed by a 1×1 channel mix (pointwise), the same idea behind MobileNet and Xception. Here the swap is applied to the Neck's multi-scale fusion blocks and the Head's prediction branches; the backbone is unchanged.</p>
+<p>A standard convolution filters space and channels at once. A depthwise separable one splits that into a per-channel spatial filter (depthwise) followed by a 1×1 channel mix (pointwise), the same idea behind MobileNet and Xception. Here the swap is applied to the prediction Head; the backbone is unchanged.</p>
 <figure>
 <img src="figures/figura2_arquitectura_yolov8.png" alt="YOLOv8 architecture: Backbone, Neck and Head" loading="lazy">
 <figcaption>Standard YOLOv8 as implemented (after Terven et al., 2023): 640×640×3 input, four backbone stages, multi-scale fusion in the Neck and three decoupled prediction branches in the Head.</figcaption>
@@ -187,12 +249,23 @@ but on a Raspberry Pi it is the difference between <strong>one frame every 14 se
 <li><b>One dataset, two platforms.</b> Hardware with dedicated accelerators (Jetson, Edge TPU, NPUs) could change the trade-off; that is the natural next step.</li>
 </ul>
 
+<h2>The hypothesis, checked</h2>
+<p><b>Partly confirmed.</b> In absolute terms the adapted model is <em>less</em> accurate: 0.175 vs. 0.212 mAP50, and no amount of extra epochs closed the gap. Relative to the resources it uses, it wins clearly on the device it was designed for: on the Raspberry Pi it delivers 83% of the accuracy at roughly a tenth of the latency and a third of the size, while the standard model is not usable there at all (one frame every 14 s). On a desktop the trade-off does not exist, because the lighter model is not faster.</p>
+
+<h2>What comes next</h2>
+<ul>
+<li><b>Dedicated edge accelerators:</b> Google Edge TPU, NVIDIA Jetson, FPGAs and NPUs, where depthwise operations are supported natively.</li>
+<li><b>Lightweight baselines:</b> compare against detectors built for the edge, such as NanoDet, MobileNet-SSD and PP-YOLO.</li>
+<li><b>Recovering accuracy:</b> fine-tuning, stronger augmentation, quantization or neural architecture search for the separable model.</li>
+<li><b>Field deployment:</b> latency, energy and stability measured in a real application, not on the validation set.</li>
+</ul>
+
 <h2>When to use which</h2>
 <p>If the model runs on a desktop or server GPU, use Conv2D: you keep the accuracy and pay nothing in speed. If it runs on a CPU-only embedded device, use the separable variant: 17% less mAP50 buys a model that is about 10× faster, 3× smaller and has predictable latency, which matters as much as accuracy for anti-collision or continuous monitoring.</p>
 
 <footer>
 <a href="tesis_yolov8_separable.pdf">Download the full thesis (PDF, Spanish)</a><br><br>
-Pablo Vicente Reyes Pino · Engineering thesis, Escuela de Ingeniería Civil en Computación e Informática, Universidad Mayor · Advisor: Dr. Anthony D. Cho<br>
+Pablo Vicente Reyes Pino · Engineering thesis, Escuela de Ingeniería Civil en Computación e Informática, Universidad Mayor · Advisor: Dr. Anthony D. Cho · Reviewer: Carlos Muñoz · Defended 24 July 2026<br>
 <a href="https://github.com/Rxyxs/yolov8-separable-convolutions">github.com/Rxyxs/yolov8-separable-convolutions</a> · MIT
 </footer>
 </div></body></html>
